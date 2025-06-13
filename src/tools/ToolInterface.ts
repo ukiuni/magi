@@ -1,0 +1,18 @@
+import { LLMCommandResult } from '../llm/LLMCommandResult';
+
+
+export type AiName = "melchior" | "balthasar" | "caspar";
+
+export interface Tool {
+  name: string;
+  description: string;
+  execute(result: LLMCommandResult): Promise<ToolResult>;
+  isForTool(aiName: AiName): boolean; 
+}
+export interface ToolResult {
+  displayMessage: string;
+  displayCommand: string;
+  result: "success" | "error";
+  resultDetail?: string;
+  llmCommandResult: LLMCommandResult;
+}

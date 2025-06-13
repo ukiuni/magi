@@ -1,0 +1,52 @@
+<svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg">
+  
+  <defs>
+    <mask id="holeMask">
+      <rect width="25" height="25" fill="white"/>
+      <circle cx="12.5" cy="12.5" r="4" fill="black"/>
+    </mask>
+  </defs>
+  
+  <g fill="white" mask="url(#holeMask)">
+    
+    <circle cx="12.5" cy="12.5" r="7"/>
+    
+    
+    
+    <rect x="11.5" y="2.5" width="2" height="4"/>
+    
+    <rect x="15.5" y="8.5" width="4" height="2" transform="rotate(45 17.5 9.5)"/>
+    
+    <rect x="18.5" y="11.5" width="4" height="2"/>
+    
+    <rect x="15.5" y="14.5" width="4" height="2" transform="rotate(-45 17.5 15.5)"/>
+    
+    <rect x="11.5" y="18.5" width="2" height="4"/>
+    
+    <rect x="5.5" y="14.5" width="4" height="2" transform="rotate(45 7.5 15.5)"/>
+    
+    <rect x="2.5" y="11.5" width="4" height="2"/>
+    
+    <rect x="5.5" y="8.5" width="4" height="2" transform="rotate(-45 7.5 9.5)"/>
+    
+    
+    <g transform="rotate(45 12.5 12.5)">
+      
+      <rect x="11.5" y="2.5" width="2" height="4"/>
+      
+      <rect x="15.5" y="8.5" width="4" height="2" transform="rotate(45 17.5 9.5)"/>
+      
+      <rect x="18.5" y="11.5" width="4" height="2"/>
+      
+      <rect x="15.5" y="14.5" width="4" height="2" transform="rotate(-45 17.5 15.5)"/>
+      
+      <rect x="11.5" y="18.5" width="2" height="4"/>
+      
+      <rect x="5.5" y="14.5" width="4" height="2" transform="rotate(45 7.5 15.5)"/>
+      
+      <rect x="2.5" y="11.5" width="4" height="2"/>
+      
+      <rect x="5.5" y="8.5" width="4" height="2" transform="rotate(-45 7.5 9.5)"/>
+    </g>
+  </g>
+</svg>

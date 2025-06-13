@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+<head>
+  
+  <meta charset="UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <style>
+    
+    body {
+      
+      margin: 0;
+      
+      padding: 60px 10px 10px 10px;
+      
+      height: 100vh;
+      
+      display: flex;
+      
+      flex-direction: column;
+      
+      box-sizing: border-box;
+    }
+
+    
+    .fixed-display-area {
+      
+      position: fixed;
+      
+      top: 0;
+      
+      left: 0;
+      
+      right: 0;
+      
+      width: 100%;
+      
+      background-color: #1a1a1a;
+      
+      border-bottom: 2px solid #333;
+      
+      padding: 10px;
+      
+      box-sizing: border-box;
+      
+      color: white;
+      
+      font-size: 14px;
+      
+      min-height: 40px;
+      
+      max-height: 120px;
+      
+      overflow-y: auto;
+      
+      white-space: normal;
+      
+      word-wrap: break-word;
+      
+      z-index: 1000;
+      
+      transition: height 0.2s ease;
+    }
+
+    
+    .fixed-display-area.collapsed {
+      
+      height: 40px;
+      
+      max-height: 40px;
+    }
+
+    
+    .fixed-display-area.collapsed .display-text {
+      
+      white-space: nowrap;
+      
+      overflow: hidden;
+      
+      text-overflow: ellipsis;
+      
+      max-width: calc(100% - 50px);
+      
+      display: inline-block;
+      
+      vertical-align: top;
+      
+      line-height: 20px;
+    }
+
+    
+    .toggle-button {
+      
+      background: none;
+      
+      border: none;
+      
+      color: #888;
+      
+      cursor: pointer;
+      
+      font-size: 12px;
+      
+      padding: 2px 4px;
+      
+      margin-right: 8px;
+      
+      border-radius: 3px;
+      
+      vertical-align: top;
+      
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    
+    .toggle-button:hover {
+      
+      
+      color: #ccc;
+    }
+
+    
+    .display-text {
+      
+      display: inline;
+    }
+
+    
+    .content {
+      
+      flex: 1;
+      
+      overflow-y: auto;
+    }
+
+    
+    .input-area {
+      
+      display: flex;
+      
+      flex-direction: column;
+      
+      margin-top: 10px;
+    }
+
+    
+    .button-row {
+      
+      display: flex;
+      
+      justify-content: flex-end;
+      
+      width: 100%;
+    }
+
+    
+    #register-input {
+      
+      width: 100%;
+      
+      box-sizing: border-box;
+      
+      resize: vertical;
+      
+      font-family: inherit;
+      
+      font-size: 12px;
+      
+      padding: 8px;
+      background-color: #00333333;
+      color: white;
+    }
+
+    
+    .error {
+      
+      display: block;
+      
+      color: #ff6b6b;
+      
+      background-color: rgba(255, 107, 107, 0.1);
+      
+      border: 1px solid #ff6b6b;
+      
+      border-radius: 4px;
+      
+      padding: 8px 12px;
+      
+      margin: 8px 0;
+      
+      font-size: 12px;
+      
+      font-weight: 500;
+      
+      border-left: 4px solid #ff6b6b;
+    }
+
+    
+    .message {
+      
+      display: block;
+      
+      color: white;
+      
+      background-color: rgba(78, 205, 196, 0.1);
+      
+      border: 1px solid #999999;
+      
+      border-radius: 4px;
+      
+      padding: 8px 12px;
+      
+      margin: 2px 0;
+      
+      font-size: 12px;
+      
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+
+    .melchior {
+      border-left: 6px solid #BBB;
+    }
+
+    .balthasar {
+      border-right: 6px solid #BBB;
+    }
+
+    .caspar {
+      border: 1px solid #AFA;
+      margin-top: 10px;
+    }
+
+    .messageTitle {
+      font-size: 10px;
+      border-bottom: 1px solid #999;
+      margin-bottom: 8px;
+    }
+
+    
+    .button-row button {
+      
+      width: 100%;
+      
+      padding: 4px;
+      
+      background-color: #333;
+      border-color: #999;
+      
+      color: white;
+      
+      border: none;
+      
+      border-radius: 4px;
+      
+      font-size: 14px;
+      
+      font-weight: 500;
+      
+      cursor: pointer;
+      
+      display: none;
+    }
+
+    
+    .button-row button:hover {
+      
+      background-color: #555;
+    }
+
+    
+    .button-row button:disabled {      
+      cursor: not-allowed;      
+      opacity: 0.6;
+    }
+
+    
+    .button-row button {
+      
+      width: 30px;
+      
+      height: 30px;
+      
+      background-color: transparent;
+      
+      border: none;
+      
+      cursor: pointer;
+      
+      padding-inline: 0;
+      
+      border-radius: 4px;
+      
+      display: flex;
+      
+      align-items: center;
+      
+      justify-content: center;
+      
+      flex-shrink: 0;
+    }
+
+    
+    .button-row button:hover {
+      
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    
+    .button-row button img {
+      
+      width: 100%;
+      
+      height: 100%;
+    }
+
+    
+    .settings-modal {
+      
+      display: none;
+      
+      position: fixed;
+      
+      top: 0;
+      
+      left: 0;
+      
+      width: 100%;
+      
+      height: 100%;
+      
+      background-color: rgba(0, 0, 0, 0.8);
+      
+      z-index: 2000;
+    }
+
+    
+    .settings-content {
+      
+      position: absolute;
+      
+      top: 50%;
+      
+      left: 50%;
+      
+      transform: translate(-50%, -50%);
+      
+      background-color: #2a2a2a;
+      
+      border: 1px solid #555;
+      
+      border-radius: 8px;
+      
+      padding: 20px;
+      
+      width: 90%;
+      
+      max-width: 500px;
+      
+      color: white;
+    }
+
+    
+    .settings-title {
+      
+      font-size: 18px;
+      
+      font-weight: bold;
+      
+      margin-bottom: 20px;
+      
+      text-align: center;
+      
+      border-bottom: 1px solid #555;
+      
+      padding-bottom: 10px;
+    }
+
+    
+    .settings-item {
+      
+      margin-bottom: 15px;
+    }
+
+    
+    .settings-label {
+      
+      display: block;
+      
+      margin-bottom: 5px;
+      
+      font-weight: 500;
+      
+      font-size: 14px;
+    }
+
+    
+    .settings-select {
+      
+      width: 100%;
+      
+      padding: 8px;
+      
+      background-color: #1a1a1a;
+      
+      color: white;
+      
+      border: 1px solid #555;
+      
+      border-radius: 4px;
+      
+      font-size: 14px;
+    }
+
+    
+    .settings-buttons {
+      
+      display: flex;
+      
+      justify-content: space-between;
+      
+      margin-top: 20px;
+      
+      gap: 10px;
+    }
+
+    
+    .settings-button {
+      
+      flex: 1;
+      
+      padding: 10px;
+      
+      border: none;
+      
+      border-radius: 4px;
+      
+      font-size: 14px;
+      
+      font-weight: 500;
+      
+      cursor: pointer;
+    }
+
+    
+    .settings-cancel-button {
+      
+      background-color: #666;
+      
+      color: white;
+    }
+
+    
+    .settings-cancel-button:hover {
+      
+      background-color: #777;
+    }
+
+    
+    .settings-complete-button {
+      
+      background-color: #007acc;
+      
+      color: white;
+    }
+
+    
+    .settings-complete-button:hover {
+      
+      background-color: #0066aa;
+    }
+
+    
+  </style>
+</head>
+
+
+<body>
+  
+  <div id="fixed-display" class="fixed-display-area">
+    
+    <button id="toggle-button" class="toggle-button">▲</button>
+    <span id="display-text" class="display-text"></span>
+    
+  </div>
+  
+  <div class="content">
+    
+    <ul id="list" />
+    
+  </div>
+  
+  <div class="input-area">
+    
+    <button id="cancel-button">キャンセル</button>
+    
+    <textarea id="register-input" rows="5"></textarea>
+    
+    <div class="button-row">
+      <button id="setting-button">
+        
+        <img src="%MEDIA_URI%/setting.svg" alt="設定">
+        
+      </button>
+      
+      <button id="register-button">
+        
+        <img src="%MEDIA_URI%/start.svg" alt="送信">
+        
+      </button>
+      
+    </div>
+    
+  </div>
+  
+  
+  
+  <div id="settings-modal" class="settings-modal">
+    
+    <div class="settings-content">
+      
+      <div class="settings-title">設定</div>
+      
+      
+      <div class="settings-item">
+        
+        <label class="settings-label" for="language-select">言語:</label>
+        
+        <select id="language-select" class="settings-select">
+          
+          <option value="ja">日本語</option>
+          
+          <option value="en" disabled>English</option>
+        </select>
+      </div>
+      
+      
+      <div class="settings-item">
+        
+        <label class="settings-label" for="melchior-model-select">Melchiorモデル:</label>
+        
+        <select id="melchior-model-select" class="settings-select">
+          
+          <option value="" disabled>モデルを選択してください</option>
+        </select>
+      </div>
+      
+      
+      <div class="settings-item">
+        
+        <label class="settings-label" for="balthasar-model-select">Balthasarモデル:</label>
+        
+        <select id="balthasar-model-select" class="settings-select">
+          
+          <option value="" disabled>モデルを選択してください</option>
+        </select>
+      </div>
+      
+      
+      <div class="settings-item">
+        
+        <label class="settings-label" for="caspar-model-select">Casparモデル:</label>
+        
+        <select id="caspar-model-select" class="settings-select">
+          
+          <option value="" disabled>モデルを選択してください</option>
+        </select>
+      </div>
+      
+      
+      <div class="settings-buttons">
+        
+        <button id="settings-cancel-button" class="settings-button settings-cancel-button">キャンセル</button>
+        
+        <button id="settings-complete-button" class="settings-button settings-complete-button">完了</button>
+      </div>
+    </div>
+  </div>
+  
+  
+  <script src="%MEDIA_URI%/main.js"></script>
+  
+</body>
+
+
+</html>
