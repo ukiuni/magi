@@ -286,6 +286,8 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 ${responseText}
 \`\`\`
 あなたはこのJSONが正しい形式であるか、また、履歴セクションから鑑みて、依頼を実施するのに適したコマンドであるかを確認してください。
+コマンドの内容まで注意深く確認し、やるべきことかどうか、さらなる改善事項があれば指摘とともにrejectするようにしてください。
+
 このJSONのtoolフィールドで実行可能なのは以下です。
 ${getAllTools().filter(tool => tool.isForTool("melchior")).map(tool => `- ${tool.name}: ${tool.description}`).join('\n')}
 

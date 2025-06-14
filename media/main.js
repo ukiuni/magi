@@ -98,6 +98,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     registerButton.addEventListener("click", () => {
+        if(executiing) {
+            return;
+        }
         const existingNewTaskButton = document.getElementById('new-task-button');
         if (existingNewTaskButton) {
             existingNewTaskButton.remove();
@@ -154,6 +157,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- 追加: 初期化時に復元 ---
     restoreRegisterInputValue();
+
+    registerInput.focus();
 });
 
 function saveStateToVSCode() {
@@ -192,6 +197,16 @@ function updateDisplay() {
 createPaneFromMessage = (message) => {
     return `<div class="${message.error ? "error":"message"} ${message.executor}"><div class="messageTitle">${message.title}</div><div>${message.text}</div></div>`;
 }
+let executiing = false;
+function executionStarted() {
+    let executiing = true;
+}
+function executionEnded() {
+    let executiing = true;
+    cancelButton.click();
+    saveStateToVSCode();
+    createNewTaskButton();
+}
 window.addEventListener("message", (event) => {
     const message = event.data;
     switch (message.type) {
@@ -200,13 +215,12 @@ window.addEventListener("message", (event) => {
             if (message.saveState) {
                 saveStateToVSCode();
             }
-            break
+            executiing = true;// for window display status change
+            break;
         }
         case "complete": {
             items.push(`<span class="message ${message.executor}">${message.text}</span><br/>`);
-            cancelButton.click();
-            saveStateToVSCode();
-            createNewTaskButton();
+            executionEnded();
             break;
         }
         case "restoreState": {
