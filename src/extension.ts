@@ -439,7 +439,7 @@ ${createHistoryPrompt(toolResultHistory)}
 		"executionSummary": "依頼完了確認",
 		"executionDescription": "すべての要件が完璧に達成されていることを確認しました。"
 }
-executionDescriptionには元の依頼内容セクションの内容を含め、完璧に達成されていると確認できた根拠、および確認するために実施したことを記載してください。
+executionDescriptionには元の依頼内容セクションの内容を含め、これまでの処理内容セクションの要約と、完璧に達成されていると確認できた根拠と、および確認するために実施したことを記載してください。
 
 まだ何かできることがある場合、または不完全な場合：
 {
