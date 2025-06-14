@@ -1,71 +1,79 @@
-# myagent README
+# MAGI README
 
-This is the README for your extension "myagent". After writing up a brief description, we recommend including the following sections.
+MAGIは、3賢者の名前を冠した3つのAIエージェントが協調して動作するVS Code拡張機能です。各エージェントが異なる役割を担うことで、より精度の高い処理を実現することを目指しています。役割を分けることで、各エージェントのコンテキストが小さくなり、より依頼事項を高精度に完了できることを期待して設計されています。
 
-## Features
+## 機能
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+MAGIは以下の3つのエージェントが協調して動作します：
 
-For example if there is an image subfolder under your extension project workspace:
+### 🔮 Melchior
+- **役割**: ユーザからの依頼を完了するためのタスクの提案を行う
+- **性格**: バリバリと成果を出す。いろんな手段を使いこなす
+- **機能**: ユーザの要求を分析し、適切なツールを選択して実行計画を立案
 
-\!\[feature X\]\(images/feature-x.png\)
+### ⚖️ Balthasar
+- **役割**: melchiorからの提案を精査し、実行を許可する
+- **性格**: 慎重で懐疑的。問題を深く掘り下げ、改善策を提案する
+- **機能**: 提案された処理の妥当性、安全性、効率性を監査し、承認または拒否を決定
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### 🎯 Caspar
+- **役割**: melchior、balthasarからの依頼完了提案を精査し、任務を完了する
+- **性格**: 完璧主義。ヌケモレを見逃さず、さらなる課題を発見、提言する
+- **機能**: 最終的な処理結果を検証し、依頼が完璧に達成されているかを確認
 
-## Requirements
+### 主な特徴
+- **協調的AI処理**: 3つのエージェントが段階的に処理を進行
+- **品質保証**: 複数の視点からの検証により高品質な結果を保証
+- **安全性**: 慎重な監査プロセスにより危険な操作を防止
+- **WebView UI**: 直感的なインターフェースでエージェントの動作を可視化
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## 必要な環境
 
-## Extension Settings
+- Visual Studio Code 1.100.0 以上
+- GitHub Copilot (現行バージョンでは、モデルはGPT-4.1のみを利用可能です。)
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## 拡張機能の設定
 
-For example:
+この拡張機能は以下の設定項目を提供します：
 
-This extension contributes the following settings:
+* `magi.language`: UIの表示言語（デフォルト: ja）
+* `magi.melchiorModel`: Melchiorエージェントが使用するLLMモデル
+* `magi.balthasarModel`: Balthasarエージェントが使用するLLMモデル
+* `magi.casparModel`: Casparエージェントが使用するLLMモデル
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+設定は拡張機能のWebViewから変更できます。
 
-## Known Issues
+## 既知の問題
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- 大規模なプロジェクトでは処理時間が長くなる場合があります
+- 一部のLLMモデルでは期待した性能が得られない場合があります
+- balthasarが精査、防御を行いますが、melchiorは様々なコマンドを許可を得ることなく実行提案します。今まで開発者の手元で問題が発生したことはありませんが、念の為devcontainerなど、サンドボックス環境での実行を推奨します。
 
-## Release Notes
+## リリースノート
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
+MAGI拡張機能の初期リリース
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+- 実験的3エージェントシステムの実装
 
 ---
 
-## Following extension guidelines
+## 拡張機能ガイドラインの遵守
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+この拡張機能は VS Code の拡張機能ガイドラインに従って開発されています。
 
 * [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
 
-## Working with Markdown
+## ライセンス
+MIT
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+## 機密保持
+MAGIが読み取った情報、利用情報などは収集されません。
+生成AIプロバイダー（現状はGitHub Copilot）に送信されるため、信頼できる生成AIプロバイダーを利用して下さい。
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+## 利用許諾
+MAGIの利用料は無料ですが、GitHub Copilotの利用料がかかります。ベースモデルを利用しているため、定額利用可能な場合、既存の定額料金となります。
+開発者の手元では有効性を確認していますが、いかなる事象が発生しても開発者は一切の責任を負いません。
 
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**お楽しみください！**
