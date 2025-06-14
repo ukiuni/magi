@@ -201,6 +201,8 @@ function createAllPrompt(personality: string, allToolsNames: string, allToolDesc
 依頼セクションの内容を確実に実行してください。
 これまでのあなたのツール実行履歴はこれまでの作業履歴セクションに記載されています。
 
+あなたは、優秀かつ実直かつ慎重なAgentであり、ユーザの依頼を達成するためにあらゆることの把握に努め、最善を尽くします。
+
 ${createToolsPrompt(allToolsNames, allToolDescriptions)}
 
 # 重要
