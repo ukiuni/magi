@@ -165,7 +165,12 @@ function saveStateToVSCode() {
 
 function restoreState(messages) {
     items = messages || [];
-    updateDisplay(); 
+    if (items.length !== 0) {
+        cancelButton.style.display = 'block';
+    } else {
+        cancelButton.style.display = 'none';
+    }
+    updateDisplay();
 }
 
 function updateDisplay() {
