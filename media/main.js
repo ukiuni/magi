@@ -7,6 +7,26 @@ let settingsModal, settingsCancelButton, settingsCompleteButton;
 
 let languageSelect, melchiorModelSelect, balthasarModelSelect, casparModelSelect;
 
+// --- 追加: register-input保存用キー ---
+const REGISTER_INPUT_KEY = 'registerInputValue';
+
+// --- 追加: 保存関数 ---
+function saveRegisterInputValue() {
+    if (registerInput && registerInput.value) {
+        vscode.setState({ ...vscode.getState(), [REGISTER_INPUT_KEY]: registerInput.value });
+    }
+}
+
+// --- 追加: 復元関数 ---
+function restoreRegisterInputValue() {
+    const state = vscode.getState();
+    if (state && state[REGISTER_INPUT_KEY]) {
+        registerInput.value = state[REGISTER_INPUT_KEY];
+        const displayText = document.getElementById('display-text');
+        if (displayText) displayText.textContent = registerInput.value;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     list = document.getElementById("list");
     registerInput = document.getElementById("register-input");
@@ -37,6 +57,9 @@ document.addEventListener('DOMContentLoaded', function() {
     registerInput.addEventListener('paste', function() {
         setTimeout(updateFixedDisplay, 10);
     });
+
+    // --- 追加: 入力時に保存 ---
+    registerInput.addEventListener('input', saveRegisterInputValue);
 
     function toggleCollapse() {
         if (isCollapsed) {
@@ -85,6 +108,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const value = registerInput.value;
         if (value) {
             registerInput.value = ""; 
+            // --- 追加: 送信時に保存内容クリア ---
+            vscode.setState({ ...vscode.getState(), [REGISTER_INPUT_KEY]: '' });
         }
         vscode.postMessage({
             type: "promptSended",
@@ -126,6 +151,9 @@ document.addEventListener('DOMContentLoaded', function() {
     vscode.postMessage({
         type: "requestState"
     });
+
+    // --- 追加: 初期化時に復元 ---
+    restoreRegisterInputValue();
 });
 
 function saveStateToVSCode() {
