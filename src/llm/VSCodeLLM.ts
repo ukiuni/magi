@@ -3,15 +3,8 @@ import { LLM } from './LLM';
 import * as vscode from 'vscode';
 
 export class VSCodeLLM implements LLM {
-    name: AiName;
-    personality: string;
 
-    constructor(name: AiName, personality: string) {
-        this.name = name;
-        this.personality = personality;
-    }
-
-    async think(promptGenerator: (aiName:AiName, personality: string) => string): Promise<string> {
+    async think(prompt: string): Promise<string> {
         return new Promise<string>(async (resolve, reject) => {
             const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
             if (!model) {
@@ -19,9 +12,8 @@ export class VSCodeLLM implements LLM {
                 return;
             }
             try {
-                const userPrompt = promptGenerator(this.name, this.personality);
                 const messages = [
-                    vscode.LanguageModelChatMessage.User(userPrompt)
+                    vscode.LanguageModelChatMessage.User(prompt)
                 ];
                 const chatResponse = await model.sendRequest(
                     messages,

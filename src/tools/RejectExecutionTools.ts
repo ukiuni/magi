@@ -3,9 +3,8 @@ import { Tool, ToolResult, AiName } from "./ToolInterface";
 
 export class RejectExecutionTools implements Tool {
     name = "rejectExecution"; 
-    description = "rejectExecutionツールは、tool実行の形式と目的、背景、手順が不適切であることを通知するためのツールです。args1には文字列で拒否の理由を入れてください。";
+    description = "rejectExecutionツールは、tool実行の形式と目的、背景、手順が不適切であることを通知するためのツールです。args1には文字列で拒否の理由と改善提案をできるだけ詳細に入れてください。";
 
-    
     isForTool(aiName: AiName): boolean {
         return aiName === "balthasar" || aiName === "caspar";
     }
