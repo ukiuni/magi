@@ -195,14 +195,14 @@ function updateDisplay() {
     });
 }
 createPaneFromMessage = (message) => {
-    return `<div class="${message.error ? "error":"message"} ${message.executor}"><div class="messageTitle">${message.title}</div><div>${message.text}</div></div>`;
+    return `<div class="${message.error ? "error":"message"} ${message.executor}"><div class="messageTitle">${message.title}</div><div class="messageText">${message.text}</div></div>`;
 }
 let executiing = false;
 function executionStarted() {
     let executiing = true;
 }
 function executionEnded() {
-    let executiing = true;
+    let executiing = false;
     cancelButton.click();
     saveStateToVSCode();
     createNewTaskButton();
@@ -219,7 +219,7 @@ window.addEventListener("message", (event) => {
             break;
         }
         case "complete": {
-            items.push(`<span class="message ${message.executor}">${message.text}</span><br/>`);
+            items.push(`<span class="message ${message.executor} complete">${message.text}</span><br/>`);
             executionEnded();
             break;
         }
@@ -312,6 +312,7 @@ function createNewTaskButton() {
         newTaskButton.remove();
         newTaskButton = null;
         registerInput.focus();
+        executiing = false;
     });
     const inputArea = registerInput.parentElement;
     inputArea.insertBefore(newTaskButton, registerInput);

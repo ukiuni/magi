@@ -7,7 +7,7 @@ export interface Tool {
   name: string;
   description: string;
   execute(result: LLMCommandResult): Promise<ToolResult>;
-  isForTool(aiName: AiName): boolean; 
+  isForTool(aiName: AiName, execution: boolean): boolean; 
 }
 export interface ToolResult {
   displayMessage: string;

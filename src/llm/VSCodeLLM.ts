@@ -6,10 +6,14 @@ export class VSCodeLLM implements LLM {
 
     async think(prompt: string): Promise<string> {
         return new Promise<string>(async (resolve, reject) => {
-            const [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
-            if (!model) {
-                reject(new Error("No available model found."));
-                return;
+            let [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
+            if (!model) {// retry for selectChatModels nees time to be ready
+                console.warn("No available model found. Retrying...");
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
+                if (!model) {
+                    reject(new Error("No available model found after retry.")); 
+                }
             }
             try {
                 const messages = [

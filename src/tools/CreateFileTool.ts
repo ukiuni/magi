@@ -7,8 +7,8 @@ export class CreateFileTool implements Tool {
     description = "createFileコマンドは、新しいファイルを作成するためのツールです。args1にはファイルパス、args2にはファイル内容を指定してください。args2には、配置してビルドすれば成功する完全なソースコードを記載してください。";
     
     
-    isForTool(aiName: AiName): boolean {
-        return aiName === "melchior"; 
+    isForTool(aiName: AiName, execution: boolean = false): boolean {
+        return aiName === "melchior" && execution; 
     }
     
     execute(llmCommandResult: LLMCommandResult) {

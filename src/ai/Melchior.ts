@@ -1,46 +1,107 @@
 import { LLM } from '../llm/LLM';
 import { PromptContext } from './PromptContext';
-import { ToolResult } from '../tools/ToolInterface';
+import { AiName } from '../tools/ToolInterface';
 import { LLMCommandResult } from '../llm/LLMCommandResult';
+import { getAllTools } from '../tools/ToolFactory';
+import { createToolExecutionHistoryPrompt, createAllToolsDescriptionPrompt, createToolsPrompt, createAllToolsPrompt, createMAGIDescriptionPrompt} from './PromptUtils';
+import { ToolResult } from '../tools/ToolInterface';
+import { PlanProposalTool } from '../tools/PlanProposalTool';
 
 export class Melchior {
     private llm: LLM;
+    readonly aiName: AiName = "melchior";
 
     constructor(llm: LLM) {
         this.llm = llm;
     }
 
-    async ask(context: PromptContext): Promise<[LLMCommandResult, string]> {
-        const responseText = await this.llm.think(this.createPrompt(context));
-     	const responseJSON = JSON.parse(responseText);
-	    const toolCommand = new LLMCommandResult(responseJSON);
+    async plan(context: PromptContext): Promise<[LLMCommandResult, string]> {
+        const toolsForAI = getAllTools().filter(tool => tool.isForTool("balthasar", false));// Balthasarのツールを使用して計画を立てる
+        toolsForAI.push(new PlanProposalTool());
+        const allToolNames = createAllToolsPrompt(toolsForAI);
+        const allToolDescriptions = createAllToolsDescriptionPrompt(toolsForAI);
+        const planningPrompt = this.createPlanningPrompt(context, allToolNames, allToolDescriptions);
+        const responseText = await this.llm.think(planningPrompt);
+        const responseJSON = JSON.parse(responseText);
+        const toolCommand = new LLMCommandResult(responseJSON);
         return [toolCommand, responseText];
     }
 
-    private createPrompt(context: PromptContext): string {
-        return `あなたはJSONを返答するAgentです。
-あなたは、優秀かつ実直かつ慎重なAgentであり、ソフトウェアエンジニアリングの完全な知識を持っています。ユーザの依頼を達成するためにあらゆることの把握に努め、最善を尽くします。
+    async ask(context: PromptContext): Promise<[LLMCommandResult, string]> {
+      const toolsForAI = getAllTools().filter(tool => tool.isForTool("melchior", true));
+      const allToolNames = createAllToolsPrompt(toolsForAI);
+      const allToolDescriptions = createAllToolsDescriptionPrompt(toolsForAI);
+      const responseText = await this.llm.think(this.createPrompt(context, allToolNames, allToolDescriptions));
+      const responseJSON = JSON.parse(responseText);
+      const toolCommand = new LLMCommandResult(responseJSON);
+      return [toolCommand, responseText];
+    }
+
+    private createPrompt(context: PromptContext, allToolsNames: string, allToolDescriptions: string): string {
+        return `${createMAGIDescriptionPrompt(true)}
+あなたはMelchiorです。
+あなたはJSONを返答するAgentです。
+あなたは、優秀かつ実直かつ慎重なAgentであり、ソフトウェアエンジニアリングの完全な知識を持っています。実行計画をするためにあらゆることの把握に努め、最善を尽くします。
+また、専門家として、実行計画が抽象的であったり曖昧だったりする場合でも、疑問に対しても回答は求めません。意図を汲み取り、自ら発想して判断を下します。
+
 
 依頼セクションの内容を確実に実行してください。
 これまでのあなたのツール実行履歴はこれまでの作業履歴セクションに記載されています。
 
-
-${this.createToolsPrompt(context.allToolsNames, context.allToolDescriptions)}
+${createToolsPrompt(allToolsNames, allToolDescriptions)}
 
 # 重要
 返答は必ずJSON形式で行ってください。
-コマンドを使って、ユーザの以下の依頼を実現してください。
+ツールを使って、以下の依頼を実現してください。
 
-# 依頼
-この依頼を達成するために必要な処理を考え、実行してください。
+# 実行計画
+以下の実行計画に基づいて、作業を進めてください。
+${context.plan}
+
+${context.toolResultHistory.length > 0 ? "# これまでの作業履歴\n" + createToolExecutionHistoryPrompt(context.toolResultHistory) : ''}
+
+
+${context.rejectReason ? this.createRejectReasonPrompt(context) : ''}
+`;
+    }
+
+    private createPlanningPrompt(context: PromptContext, allToolsNames: string, allToolDescriptions: string): string {
+        return `${createMAGIDescriptionPrompt(true)}
+あなたはMelchiorです。
+あなたは優秀な実行計画立案者です。
+与えられたユーザの依頼を分析し、ツールを用いて状況を把握し、それを実現するための詳細で実行可能な計画をYAML形式で作成してください。
+ファイルを読むなどのツールの実行結果はツール実行履歴セクションに記載されています。
+また、専門家として、依頼が抽象的であったり曖昧だったりする場合でも、ユーザの意図を汲み取り、自ら発想して判断を下します。
+
+
+# 計画作成の要件
+- 計画は具体的で実行可能な手順に分解してください
+- 各フェーズは明確で理解しやすいものにしてください
+- 各タスクは一回のツール実行で完了するようにしてください
+- 必要に応じて並行実行可能なタスクを識別してください
+- リスクや考慮事項も含めてください
+- 完了条件を明確にしてください
+
+# ユーザの依頼
+ユーザの依頼は以下です。
 ${context.userPrompt}
 
-# これまでの作業履歴
-${context.toolResultHistory.length > 0 ? this.createHistoryPrompt(context.toolResultHistory) : ''}
+${createToolsPrompt(allToolsNames, allToolDescriptions)}
 
-${context.rejectReason ? `
-# 前回の処理実行の拒否
-前回の処理実行は以下の内容で拒否されているので、必ず改善したJSONを返答してください。
+${context.toolResultHistory.length > 0 ? "# あなたのツール実行履歴\n" + createToolExecutionHistoryPrompt(context.toolResultHistory) : ''}
+
+# 返答形式
+planProposalツールのargs1で実行計画を返答してください。
+必ずYAML形式で返答し、YAML以外の情報は不要です。プロジェクトを成功に導く実行可能な計画を作成してください。
+planProposalツールの実行は十分にファイルを読み、慎重に検討を重ねたあとにだけ行ってください。
+
+${context.rejectReason ? this.createRejectReasonPrompt(context) : ''}
+`;
+    }
+    createRejectReasonPrompt(context: PromptContext): string {
+        return `
+# 前回のツール実行の拒否
+前回の処理実行はBalthasarから以下の内容で拒否されているので、必ず改善した内容を返答してください。同じ内容で返答することは絶対に禁止とします。
 ## 拒否された処理実行
 ${(context.rejectedLLMCommandResult) ?`
 tool: ${context.rejectedLLMCommandResult.tool}
@@ -50,42 +111,6 @@ executionDescription: ${context.rejectedLLMCommandResult.executionDescription}
 ## 拒否理由
 summary: ${context.rejectReason?.executionSummary}
 executionDescription: ${context.rejectReason?.executionDescription}
-` : ''}
 `;
-    }
-
-    private createToolsPrompt(allToolsNames: string, allToolDescriptions: string): string {
-        return `# あなたが返答するJSONの形式
-JSONは以下の形式で返答してください。
-
-\`\`\`
-{
-"tool":"tool",
-"args": ["args1の値","args2の値","args3の値"],
-"executionSummary", "あなたが実行内容をあとから理解するためのtool実行内容とその目的",
-"executionDescription": "ユーザ表示用メッセージ。tool実行内容とその目的、背景などを含む",
-}
-\`\`\`
-args1, args2, args3は、必要に応じて設定してください。
-executionSummaryは、実行内容とその目的を簡潔に記載してください。
-executionDescriptionは、ユーザに表示するメッセージです。toolの実行内容とその目的、背景などを含めてください。
-
-toolとして返答可能なのは以下です。
-${allToolsNames}
-
-# toolの説明
-${allToolDescriptions}
-`;
-    }
-
-    private createHistoryPrompt(toolResultHistory: ToolResult[]): string {
-        return toolResultHistory.map((result: ToolResult, index: number) => `
-## 履歴 ${index + 1}
-displayMessage: ${result.displayMessage}
-displayCommand: ${result.displayCommand}
-result: ${result.result}
-resultDetail: ${result.resultDetail}
-llmCommandResult: ${JSON.stringify(result.llmCommandResult, null, 2)}
-`).join('\n');
     }
 }

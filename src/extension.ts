@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
 import { LLMCommandResult } from './llm/LLMCommandResult';
-import { createTool, getAllTools } from './tools/ToolFactory';
-import { AiName, ToolResult } from './tools/ToolInterface';
+import { createTool } from './tools/ToolFactory';
+import { ToolResult } from './tools/ToolInterface';
 import { PromptContext } from './ai/PromptContext';
 import { Melchior } from './ai/Melchior';
 import { Balthasar } from './ai/Balthasar';
@@ -18,9 +18,7 @@ interface ResponseJSON {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-
 	const provider = new MagiViewProvider(context.extensionUri, context);
-
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(
 			"myExtension.view",
@@ -174,29 +172,29 @@ async function loadModels() {
 	*/
 	return models;
 }
-// 古いプロンプト生成関数は削除され、新しいAIクラスに移動しました ✨
-const createToolInfo = (aiName: AiName) => {
-	const allTools = getAllTools();
-	const toolsForAI = allTools.filter(tool => tool.isForTool(aiName));
-	const toolNames = toolsForAI.map(tool => tool.name).join(', ');
-	const toolDescriptions = toolsForAI.map(tool => `## ${tool.name}\n ${tool.description}`).join('\n\n');
-	return {
-		allToolsNames: toolNames,
-		allToolDescriptions: toolDescriptions
-	};
-}
 async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, toolResultHistory: ToolResult[] = [], rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null) {
+	let plan: string | void = "";
+	if (!llmExecutionCancelled) {
+		plan = await phase(false, webviewView, userPrompt, plan, toolResultHistory, rejectedLLMCommandResult, rejectReason);
+	}
+	if (!llmExecutionCancelled) {
+		phase(true, webviewView, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
+	}
+}
+function showCanceled(webviewView: vscode.WebviewView,) {
+	webviewView.webview.postMessage({
+		type: "showMessage",
+		title: "ユーザによる処理キャンセルが実行されました。",
+		text: "処理がキャンセルされました。",
+		executor: "user",
+		saveState: true
+	});
+}
+async function phase(execution: boolean, webviewView: vscode.WebviewView, userPrompt: string, plan: string, melchiorExecutionHistory: ToolResult[] = [], rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null): Promise<string | void>	 {
 	if(llmExecutionCancelled) {
-		webviewView.webview.postMessage({
-			type: "showMessage",
-			title: "ユーザによる処理キャンセルが実行されました。",
-			text: "処理がキャンセルされました。",
-			executor: "user",
-			saveState: true 
-		});
+		showCanceled(webviewView);
 		return;
 	}
-	// 新しいAIクラスのインスタンスを作成 🎭
 	const melchiorLLM = new VSCodeLLM();
 	const balthasarLLM = new VSCodeLLM();
 	const casparLLM = new VSCodeLLM();
@@ -205,27 +203,22 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 	const balthasar = new Balthasar(balthasarLLM);
 	const caspar = new Caspar(casparLLM);
 
-	// プロンプトコンテキストを作成 📋
-	const { allToolsNames, allToolDescriptions } = createToolInfo("melchior");
 	const context = new PromptContext({
 		userPrompt,
-		toolResultHistory,
+		toolResultHistory: melchiorExecutionHistory,
 		rejectedLLMCommandResult,
 		rejectReason,
-		allToolsNames,
-		allToolDescriptions
+		plan
 	});
-    let toolCommand: LLMCommandResult;
-	let responseText: string = "";
+    let melchiorCommand: LLMCommandResult;
+	let melchiorResponseText: string = "";
 	try {
-		[toolCommand, responseText] = await melchior.ask(context);
+		if(execution) {
+			[melchiorCommand, melchiorResponseText] = await melchior.ask(context);
+		} else {
+			[melchiorCommand, melchiorResponseText] = await melchior.plan(context);
+		}
 	} catch (error) {
-		rejectReason = new LLMCommandResult({
-			tool: "rejectExecution",
-			args: [],
-			executionSummary: "melchiorの処理実行でエラーが発生しました。",
-			executionDescription: "melchiorの処理実行に失敗しました。" + error
-		});
 		webviewView.webview.postMessage({
 			type: "showMessage",
 			title: "melchiorの処理実行でエラーが発生しました。",
@@ -234,10 +227,14 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 			error: "error",
 			saveState: true
 		});
-		treatLLM(webviewView, userPrompt, toolResultHistory, null, rejectReason);
-		return;
+		rejectReason = new LLMCommandResult({
+			tool: "rejectExecution",
+			args: [],
+			executionSummary: "melchiorの処理実行でエラーが発生しました。",
+			executionDescription: "melchiorの処理実行に失敗しました。" + error
+		});
+		return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, null, rejectReason);
 	}
-	console.log("responseText:", responseText);
 
 	let bartasarApproved = false;
 	let bartasarExecuteTools: ToolResult[] = [];
@@ -245,25 +242,21 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 	webviewView.webview.postMessage({
 		type: "showMessage",
 		title: "melchiorが処理の実行を要求しています。",
-		text: toolCommand.executionDescription,
+		text: melchiorCommand.executionDescription,
 		executor: "melchior",
 		saveState: true 
 	});
 	while (!llmExecutionCancelled) {
-		// Balthasarのコンテキストを作成 🔍
-		const { allToolsNames: balthasarToolNames, allToolDescriptions: balthasarToolDescriptions } = createToolInfo("balthasar");
 		const balthasarContext = new PromptContext({
 			userPrompt,
-			toolResultHistory,
-			rejectedLLMCommandResult,
-			rejectReason,
-			allToolsNames: balthasarToolNames,
-			allToolDescriptions: balthasarToolDescriptions
+			toolResultHistory: melchiorExecutionHistory,
+		    plan
 		});
 		
 		let bartasaleResult: LLMCommandResult;
+        rejectReason = rejectedLLMCommandResult = null; // reset last rejection.
 		try{
-			[bartasaleResult]= await balthasar.ask(balthasarContext, responseText, bartasarExecuteTools);
+			[bartasaleResult]= await balthasar.ask(balthasarContext, melchiorResponseText, bartasarExecuteTools, execution);
 		} catch (error) {
 			webviewView.webview.postMessage({//TODO show message as error
 				type: "showMessage",
@@ -278,32 +271,31 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 		if (bartasaleResult.tool === "rejectExecution") {
 			webviewView.webview.postMessage({
 				type: "showMessage",
-				title: "❌️ balthasarがmelchiorのコマンドを拒否しました。",
+				title: "❌️ balthasarがmelchiorの提案を拒否しました。",
 				text: bartasaleResult.executionDescription,
 				executor: "balthasar",
 				saveState: true 
 			});
 			rejectReason = bartasaleResult;
-			rejectedLLMCommandResult = toolCommand;
+			rejectedLLMCommandResult = melchiorCommand;
 			break;
 		} else if (bartasaleResult.tool === "approveExecution") {
 			bartasarApproved = true;
-			rejectReason = rejectedLLMCommandResult = null;
 			webviewView.webview.postMessage({
 				type: "showMessage",
-				title: "⭕️ balthasarがmelchiorのコマンドを承認しました。",
+				title: "⭕️ balthasarがmelchiorの提案を承認しました。",
 				text: bartasaleResult.executionDescription,
 				executor: "balthasar",
 				saveState: true 
 			});
 			break;
 		} else {
-			const balthasarTool = createTool(bartasaleResult.tool, "balthasar");
+			const balthasarTool = createTool(bartasaleResult.tool, "balthasar", execution);
 			if (!balthasarTool) {
 				webviewView.webview.postMessage({
 					type: "showMessage",
-					title: "balthasarが不正なコマンドを実行しようとしています。",
-					text: "不正なコマンドです。",
+					title: "balthasarが存在しないツールをしようとしています。",
+					text: "存在しないツール:" + bartasaleResult.tool,
 					executor: "balthasar",
 					error: "error",
 					saveState: true 
@@ -313,8 +305,8 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 			const toolResult = await balthasarTool.execute(bartasaleResult);
 			webviewView.webview.postMessage({
 				type: "showMessage",
-				title: "balthasarがツールを実行しています。",
-				text: toolResult.displayMessage,
+				title: "balthasarが確認作業を行っています。",
+				text: toolResult.llmCommandResult.executionDescription,
 				executor: "balthasar",
 				saveState: true 
 			});
@@ -332,8 +324,8 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 		}
 	}
 	if (bartasarApproved) {
-		const tool = createTool(toolCommand.tool, "melchior");
-		if (!tool) {
+		const melchiorExecuteTool = createTool(melchiorCommand.tool, "melchior", execution);
+		if (!melchiorExecuteTool) {
 			webviewView.webview.postMessage({
 				type: "showMessage",
 				title: "melchiorが不正なコマンドを実行しようとしています。",
@@ -341,47 +333,54 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 				executor: "melchior",
 				saveState: true 
 			});
-			return;
+			rejectReason = new LLMCommandResult({
+				tool: "rejectExecution",
+				args: [],
+				executionSummary: "melchiorが不正なコマンドを実行しようとしています。",
+				executionDescription: melchiorCommand.tool + "は存在しないコマンドです。"
+			});
+			return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
 		}
-		const toolResult = await tool.execute(toolCommand);
-		const casparExecuteTools: ToolResult[] = [];
-		webviewView.webview.postMessage({
-			type:  "showMessage",
-			title: "melchiorがツールを実行しています。",
-			text: toolResult.displayMessage,
-			executor: "melchior",
-			saveState: true 
-		});
-		toolResultHistory.push(toolResult);
-		if (tool.name === "recommendComplete") {
+		const melchiorToolResult = await melchiorExecuteTool.execute(melchiorCommand);
+		const isMelchiorDoClosingTool = (melchiorExecuteTool.name === "recommendComplete" && execution) || (melchiorExecuteTool.name === "planProposal" && !execution)
+		if (!isMelchiorDoClosingTool) {
 			webviewView.webview.postMessage({
 				type: "showMessage",
-				title: "casparが依頼の完了確認を開始しています。",
-				text: "これまでの処理内容で依頼が完璧に達成できたかを詳細に確認します。",
+				title: "melchiorがツールを実行しています。",
+				text: melchiorToolResult.displayMessage,
+				executor: "melchior",
+				saveState: true
+			});
+		}
+		melchiorExecutionHistory.push(melchiorToolResult);
+		if (isMelchiorDoClosingTool) {
+			webviewView.webview.postMessage({
+				type: "showMessage",
+				title: execution ? "casparが依頼の完了確認を開始しています。" : "casparが実行計の検証を開始しています。",
+				text:  execution ? "これまでの処理内容で依頼が完璧に達成できたかを詳細に確認します。" : "実行計画:\n" + melchiorToolResult.llmCommandResult.args[1],
 				executor: "caspar",
 				saveState: true 
 			});
-
-			// Casparのコンテキストを作成 ⚖️
-			const { allToolsNames: casparToolNames, allToolDescriptions: casparToolDescriptions } = createToolInfo("caspar");
+		    const casparExecutionHistory: ToolResult[] = [];
 			const casparContext = new PromptContext({
 				userPrompt,
-				toolResultHistory,
-				rejectedLLMCommandResult,
-				rejectReason,
-				allToolsNames: casparToolNames,
-				allToolDescriptions: casparToolDescriptions
+				toolResultHistory: casparExecutionHistory,
+				plan
 			});
 
 			while (!llmExecutionCancelled) {
 				let casparResult: LLMCommandResult;
 				try {
-					[casparResult] = await caspar.ask(casparContext, casparExecuteTools);
+					if(execution){
+						[casparResult] = await caspar.ask(casparContext, melchiorExecutionHistory);
+					} else {
+						[casparResult] = await caspar.decidingToimplementThePlan(casparContext, melchiorToolResult.llmCommandResult.args[0]);
+					}
 				} catch (error) {
 					webviewView.webview.postMessage({
 						type: "showMessage",
 						title: "casparの応答が不正なJSON形式です。",
-						text: "エラーで再走します。エラー：" + error,
+						text: "エラーが発生したため再走します。エラー：" + error,
 						executor: "caspar",
 						error: "error",
 						saveState: true
@@ -389,41 +388,25 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 					continue;
 				}
 				if (casparResult.tool === "approveExecution") {
-					
 					webviewView.webview.postMessage({
-						type: "complete",
-						title: "casparが処理完了を確認しました。",
-						text: casparResult.executionDescription,
+						type: execution ? "complete" : "showMessage",
+						title: execution ? "⭕️ casparが処理完了を確認しました。" : "⭕️ casparが実行計画を承認しました。",
+						text: execution ? casparResult.args[0] : "実行計画:\n" + melchiorToolResult.llmCommandResult.args[1] + "\n\n承認根拠\n:" + casparResult.args[0],
 						executor: "caspar"
 					});
-					return;
+					return melchiorToolResult.llmCommandResult.args[0];
 				} else if (casparResult.tool === "rejectExecution") {
 					rejectReason = casparResult;
-					rejectedLLMCommandResult = toolCommand;
-					
 					webviewView.webview.postMessage({
 						type: "showMessage",
-						title: "casparが追加作業が必要と判断しました。",
-						text: casparResult.executionDescription,
+						title: "↩️ casparが追加作業が必要と判断しました。",
+						text: casparResult.args[0],
 						executor: "caspar",
 						saveState: true 
 					});
-					
-					const rejectTool = createTool("rejectExecution", "caspar");
-					if (rejectTool) {
-						const rejectResult = await rejectTool.execute(casparResult);
-						webviewView.webview.postMessage({
-							type: "showMessage",
-							title: "casparがrejectExecutionツールを実行しました。",
-							text: rejectResult.displayMessage,
-							executor: "caspar",
-							saveState: true 
-						});
-					}
 					break; 
 				} else {
-					
-					const casparTool = createTool(casparResult.tool, "caspar");
+					const casparTool = createTool(casparResult.tool, "caspar", execution);
 					if (!casparTool) {
 						webviewView.webview.postMessage({
 							type: "showMessage",
@@ -455,11 +438,11 @@ async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, too
 							saveState: true 
 						});
 					}
-					casparExecuteTools.push(casparToolResult);
+					casparExecutionHistory.push(casparToolResult);
 				}
 			}
 		}
 	}
 
-	treatLLM(webviewView, userPrompt, toolResultHistory, rejectedLLMCommandResult, rejectReason);
+	return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
 }

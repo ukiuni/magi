@@ -5,7 +5,6 @@ export class ApproveExecutionTools implements Tool {
     name = "approveExecution"; 
     description = "approveExecutionツールは、tool実行の形式と目的、背景、手順が妥当であることを通知するためのツールです。args1には文字列で判断の根拠を入れてください。";
 
-    
     isForTool(aiName: AiName): boolean {
         return aiName === "balthasar" || aiName === "caspar";
     }

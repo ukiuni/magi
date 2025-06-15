@@ -7,8 +7,8 @@ export class UpdateFileTool implements Tool {
     description = "updateFileコマンドは、既存ファイルの内容を更新するためのツールです。args1にはファイルパス、args2には新しいファイル内容を指定してください。args2には、配置してビルドすれば成功する完全なソースコードを記載してください。";
     
     
-    isForTool(aiName: AiName): boolean {
-        return aiName === "melchior"; 
+    isForTool(aiName: AiName, execution: boolean): boolean {
+        return aiName === "melchior" && execution; 
     }
     
     execute(llmCommandResult: LLMCommandResult) {
