@@ -13,7 +13,7 @@ export function createToolExecutionHistoryPrompt(toolResultHistory: ToolResult[]
 ${YAML.stringify(result)}  
 `).join('\n\n');
 }
-export function createToolsPrompt(allToolsNames: string, allToolDescriptions: string): string {
+export function createToolsPrompt(allToolsNames: string, allToolDescriptions: string, toolFor: string = "#tool\ntoolとして返答可能なのは以下です。"): string {
         return `# あなたが返答するJSONの形式
 JSONは以下の形式で返答してください。
 
@@ -31,10 +31,12 @@ executionDescriptionは、ユーザに表示するメッセージです。tool�
 args1, args2, args3, executionSummary, executionDescriptionは、必ずJSONエスケープを行ってください。
 executionSummary,executionDescriptionは必須項目です。
 
-toolとして返答可能なのは以下です。
+
+${toolFor}
+## tool一覧
 ${allToolsNames}
 
-# toolの説明
+## toolの説明
 ${allToolDescriptions}
 `;
 }

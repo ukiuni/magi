@@ -74,11 +74,10 @@ ${context.rejectReason ? this.createRejectReasonPrompt(context) : ''}
 また、専門家として、依頼が抽象的であったり曖昧だったりする場合でも、ユーザの意図を汲み取り、自ら発想して判断を下します。
 
 
-# 計画作成の要件
-- 計画は具体的で実行可能な手順に分解してください
+# 実行計画作成の要件
+- 実行計画は具体的で実行可能な手順に分解してください
 - 各フェーズは明確で理解しやすいものにしてください
-- 各タスクは一回のツール実行で完了するようにしてください
-- 必要に応じて並行実行可能なタスクを識別してください
+- 各タスクは一回のツール実行で完了するものにしてください
 - リスクや考慮事項も含めてください
 - 完了条件を明確にしてください
 
@@ -86,7 +85,11 @@ ${context.rejectReason ? this.createRejectReasonPrompt(context) : ''}
 ユーザの依頼は以下です。
 ${context.userPrompt}
 
-${createToolsPrompt(allToolsNames, allToolDescriptions)}
+# 実行計画内で実行可能なツール
+実行計画内で実行可能なツールは以下です。各タスクの中で1つのツールを実行し、タスクを完了するようにしてください。
+${getAllTools().filter(tool => tool.isForTool("melchior", true)).map(tool => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+${createToolsPrompt(allToolsNames, allToolDescriptions, "#実行計画策定中（今）に利用可能なtool\n実行計画作成中である現在、実行可能なtoolは以下です。")}
 
 ${context.toolResultHistory.length > 0 ? "# あなたのツール実行履歴\n" + createToolExecutionHistoryPrompt(context.toolResultHistory) : ''}
 

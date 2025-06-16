@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 
 export class CreateFileTool implements Tool {
     name = "createFile";
-    description = "createFileコマンドは、新しいファイルを作成するためのツールです。args1にはファイルパス、args2にはファイル内容を指定してください。args2には、配置してビルドすれば成功する完全なソースコードを記載してください。";
+    description = "createFileコマンドは、新しいファイルを作成するためのツールです。args1にはファイルパス、args2にはファイル全体の内容を指定してください。args2には、配置してビルドすれば成功する完全なソースコード全体を記載してください。";
     
     
     isForTool(aiName: AiName, execution: boolean = false): boolean {

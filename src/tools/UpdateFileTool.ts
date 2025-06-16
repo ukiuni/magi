@@ -4,8 +4,7 @@ import * as vscode from 'vscode';
 
 export class UpdateFileTool implements Tool {
     name = "updateFile";
-    description = "updateFileコマンドは、既存ファイルの内容を更新するためのツールです。args1にはファイルパス、args2には新しいファイル内容を指定してください。args2には、配置してビルドすれば成功する完全なソースコードを記載してください。";
-    
+    description = "updateFileコマンドは、既存ファイルの内容を更新するためのツールです。args1にはファイルパス、args2には新しいファイルの全体内容を指定してください。args2には、配置してビルドすれば成功する完全なソースコード全体を記載してください。";
     
     isForTool(aiName: AiName, execution: boolean): boolean {
         return aiName === "melchior" && execution; 
