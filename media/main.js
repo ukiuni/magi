@@ -1,11 +1,15 @@
 // main.js
+
 const vscode = acquireVsCodeApi();
+
 let items = [];
+
 let list, registerInput, registerButton, cancelButton, newTaskButton;
 
 let settingsModal, settingsCancelButton, settingsCompleteButton;
 
-let languageSelect, melchiorModelSelect, balthasarModelSelect, casparModelSelect;
+let languageSelect, melchiorModelSelect, balthasarModelSelect,
+casparModelSelect;
 
 // --- 追加: register-input保存用キー ---
 const REGISTER_INPUT_KEY = 'registerInputValue';
@@ -181,17 +185,20 @@ function restoreState(messages) {
 function updateDisplay() {
     if (!list) return; 
     list.innerHTML = items.join(""); 
+    const contentDiv = list.parentElement;
+    const lastElement = list.lastElementChild;
+    if (contentDiv && lastElement) {
+        const contentRect = contentDiv.getBoundingClientRect();
+        const lastRect = lastElement.getBoundingClientRect();
+        const isVisible = (
+            lastRect.top < contentRect.height + lastRect.height
+        );
+        if (!isVisible) {
+            return;
+        }
+    }
     requestAnimationFrame(() => {
-        if (!list) return; 
-        const contentDiv = list.parentElement; 
-        if (contentDiv) {
-            contentDiv.scrollTop = contentDiv.scrollHeight; 
-        }
-        list.scrollTop = list.scrollHeight; 
-        const lastElement = list.lastElementChild;
-        if (lastElement) {
-            lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' }); 
-        }
+        lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
     });
 }
 createPaneFromMessage = (message, appendsClass) => {
