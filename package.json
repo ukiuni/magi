@@ -2,7 +2,7 @@
   "name": "magi",
   "displayName": "MAGI",
   "description": "AI Agent with MAGI",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "publisher": "ukiuni",
   "engines": {

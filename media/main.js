@@ -194,8 +194,11 @@ function updateDisplay() {
         }
     });
 }
-createPaneFromMessage = (message) => {
-    return `<div class="${message.error ? "error":"message"} ${message.executor}"><div class="messageTitle">${message.title}</div><div class="messageText">${message.text}</div></div>`;
+createPaneFromMessage = (message, appendsClass) => {
+    if(message.systemInfo) {
+        return  `<div class="${message.error ? "error":"message"} systemMessage">${message.text}</div>`;
+    }
+    return `<div class="${message.error ? "error":"message"} ${message.executor} ${appendsClass}"><div class="messageTitle">${message.title}</div><div class="messageText">${message.text}</div></div>`;
 }
 let executiing = false;
 function executionStarted() {
@@ -215,11 +218,11 @@ window.addEventListener("message", (event) => {
             if (message.saveState) {
                 saveStateToVSCode();
             }
-            executiing = true;// for window display status change
+            executiing = true;
             break;
         }
         case "complete": {
-            items.push(`<span class="message ${message.executor} complete">${message.text}</span><br/>`);
+            items.push(createPaneFromMessage(message, "complete"));
             executionEnded();
             break;
         }

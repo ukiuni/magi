@@ -26,7 +26,9 @@ export function activate(context: vscode.ExtensionContext) {
 		),
 	);
 }
+
 var llmExecutionCancelled = false; 
+
 class MagiViewProvider implements vscode.WebviewViewProvider {
 	private _view?: vscode.WebviewView;
 	private _context: vscode.ExtensionContext;
@@ -43,7 +45,6 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 		
 		webviewView.onDidChangeVisibility(() => {
 			if (webviewView.visible) {
-				
 				webviewView.webview.postMessage({
 					type: "requestStateRestore"
 				});
@@ -75,12 +76,10 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 					break;
 				}
 				case "saveState": {
-					
 					this._context.workspaceState.update('webviewMessages', data.messages);
 					break;
 				}
 				case "requestState": {
-					
 					const savedMessages = this._context.workspaceState.get('webviewMessages', []);
 					webviewView.webview.postMessage({
 						type: "restoreState",
@@ -89,25 +88,18 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 					break;
 				}
 				case "openSettings": {
-					
 					try {
-						
 						const models = await loadModels();
-						
 						const defaultModel = models.find(model =>
 							model.vendor === 'copilot' && model.family === 'gpt-4.1'
 						);
-						
 						const defaultModelName = defaultModel ? defaultModel.name : '';
-						
-						
 						const currentSettings = this._context.workspaceState.get('userSettings', {
 							language: 'ja',
 							melchiorModel: defaultModelName,
 							balthasarModel: defaultModelName,
 							casparModel: defaultModelName
 						});
-						
 						webviewView.webview.postMessage({
 							type: "showSettings",
 							settings: currentSettings,
@@ -118,7 +110,6 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 							}))
 						});
 					} catch (error) {
-						
 						webviewView.webview.postMessage({
 							type: "showMessage",
 							title: "モデル取得エラーが発生しました。",
@@ -131,9 +122,7 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 					break;
 				}
 				case "saveSettings": {
-					
 					this._context.workspaceState.update('userSettings', data.settings);
-					
 					webviewView.webview.postMessage({
 						type: "settingsSaved"
 					});
@@ -149,8 +138,6 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 
 			htmlContent = htmlContent.replaceAll('%MEDIA_URI%', mediaUri.toString());
 			webviewView.webview.html = htmlContent;
-			
-			
 			setTimeout(() => {
 				const savedMessages = this._context.workspaceState.get('webviewMessages', []);
 				webviewView.webview.postMessage({
@@ -163,24 +150,39 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 }
+
 async function loadModels() {
 	const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
-	/*
-	models.forEach(model => {
-	  console.log(`Model: ${model.name}, Family: ${model.family}, Vendor: ${model.vendor}`);
-	});	
-	*/
 	return models;
 }
-async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, toolResultHistory: ToolResult[] = [], rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null) {
+
+async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string,
+toolResultHistory: ToolResult[] = [], rejectedLLMCommandResult:
+LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
+{
 	let plan: string | void = "";
 	if (!llmExecutionCancelled) {
+		webviewView.webview.postMessage({
+			type: "showMessage",
+			text: "実行計画の策定を開始します。",
+			executor: "system",
+			saveState: true,
+			systemInfo: true
+		});
 		plan = await phase(false, webviewView, userPrompt, plan, toolResultHistory, rejectedLLMCommandResult, rejectReason);
 	}
 	if (!llmExecutionCancelled) {
+		webviewView.webview.postMessage({
+			type: "showMessage",
+			text: "実行計画の遂行を開始します。",
+			executor: "system",
+			saveState: true,
+			systemInfo: true
+		});
 		phase(true, webviewView, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
 	}
 }
+
 function showCanceled(webviewView: vscode.WebviewView,) {
 	webviewView.webview.postMessage({
 		type: "showMessage",
@@ -190,19 +192,22 @@ function showCanceled(webviewView: vscode.WebviewView,) {
 		saveState: true
 	});
 }
-async function phase(execution: boolean, webviewView: vscode.WebviewView, userPrompt: string, plan: string, melchiorExecutionHistory: ToolResult[] = [], rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null): Promise<string | void>	 {
+
+async function phase(execution: boolean, webviewView: vscode.WebviewView,
+userPrompt: string, plan: string, melchiorExecutionHistory: ToolResult[] = [],
+rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason:
+LLMCommandResult | null = null): Promise<string | void> {
 	if(llmExecutionCancelled) {
 		showCanceled(webviewView);
 		return;
 	}
+
 	const melchiorLLM = new VSCodeLLM();
 	const balthasarLLM = new VSCodeLLM();
 	const casparLLM = new VSCodeLLM();
-	
 	const melchior = new Melchior(melchiorLLM);
 	const balthasar = new Balthasar(balthasarLLM);
 	const caspar = new Caspar(casparLLM);
-
 	const context = new PromptContext({
 		userPrompt,
 		toolResultHistory: melchiorExecutionHistory,
@@ -250,9 +255,8 @@ async function phase(execution: boolean, webviewView: vscode.WebviewView, userPr
 		const balthasarContext = new PromptContext({
 			userPrompt,
 			toolResultHistory: melchiorExecutionHistory,
-		    plan
+	    plan
 		});
-		
 		let bartasaleResult: LLMCommandResult;
         rejectReason = rejectedLLMCommandResult = null; // reset last rejection.
 		try{
@@ -367,7 +371,6 @@ async function phase(execution: boolean, webviewView: vscode.WebviewView, userPr
 				toolResultHistory: casparExecutionHistory,
 				plan
 			});
-
 			while (!llmExecutionCancelled) {
 				let casparResult: LLMCommandResult;
 				try {
@@ -418,7 +421,6 @@ async function phase(execution: boolean, webviewView: vscode.WebviewView, userPr
 						});
 						continue;
 					}
-					
 					const casparToolResult = await casparTool.execute(casparResult);
 					webviewView.webview.postMessage({
 						type: "showMessage",
@@ -427,7 +429,6 @@ async function phase(execution: boolean, webviewView: vscode.WebviewView, userPr
 						executor: "caspar",
 						saveState: true 
 					});
-					
 					if (casparToolResult.result === "error") {
 						webviewView.webview.postMessage({
 							type: "showMessage",
@@ -443,6 +444,5 @@ async function phase(execution: boolean, webviewView: vscode.WebviewView, userPr
 			}
 		}
 	}
-
 	return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
 }
