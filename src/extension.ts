@@ -9,14 +9,6 @@ import { Balthasar } from './ai/Balthasar';
 import { Caspar } from './ai/Caspar';
 import { VSCodeLLM } from './llm/VSCodeLLM';
 
-// レスポンスJSON型定義 - 三博士の知恵を統合
-interface ResponseJSON {
-    tool: string;
-    args: string[];
-    executionSummary: string;
-    executionDescription: string;
-}
-
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new MagiViewProvider(context.extensionUri, context);
 	context.subscriptions.push(
@@ -226,8 +218,8 @@ LLMCommandResult | null = null): Promise<string | void> {
 	} catch (error) {
 		webviewView.webview.postMessage({
 			type: "showMessage",
-			title: "melchiorの処理実行でエラーが発生しました。",
-			text: "melchiorの処理実行に失敗しました。" + error,
+			title: "melchiorの考察でエラーが発生しました。",
+			text: "melchiorの考察に失敗しました。" + error,
 			executor: "melchior",
 			error: "error",
 			saveState: true
@@ -235,8 +227,8 @@ LLMCommandResult | null = null): Promise<string | void> {
 		rejectReason = new LLMCommandResult({
 			tool: "rejectExecution",
 			args: [],
-			executionSummary: "melchiorの処理実行でエラーが発生しました。",
-			executionDescription: "melchiorの処理実行に失敗しました。" + error
+			executionSummary: "melchiorの考察でエラーが発生しました。",
+			executionDescription: "melchiorの考察に失敗しました。" + error
 		});
 		return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, null, rejectReason);
 	}
@@ -247,7 +239,7 @@ LLMCommandResult | null = null): Promise<string | void> {
 	webviewView.webview.postMessage({
 		type: "showMessage",
 		title: "melchiorが処理の実行を要求しています。",
-		text: melchiorCommand.executionDescription,
+		text: melchiorCommand.executionDescription || melchiorCommand.executionSummary,
 		executor: "melchior",
 		saveState: true 
 	});
@@ -258,13 +250,13 @@ LLMCommandResult | null = null): Promise<string | void> {
 	    plan
 		});
 		let bartasaleResult: LLMCommandResult;
-        rejectReason = rejectedLLMCommandResult = null; // reset last rejection.
+        rejectReason = rejectedLLMCommandResult = null;
 		try{
 			[bartasaleResult]= await balthasar.ask(balthasarContext, melchiorResponseText, bartasarExecuteTools, execution);
 		} catch (error) {
-			webviewView.webview.postMessage({//TODO show message as error
+			webviewView.webview.postMessage({
 				type: "showMessage",
-				title: "balthasarの応答が不正なJSON形式です。",
+				title: "balthasarの考察でエラーが発生しました。",
 				text: "エラーで再走します。エラー：" + error,
 				executor: "balthasar",
 				error: "error",
@@ -382,7 +374,7 @@ LLMCommandResult | null = null): Promise<string | void> {
 				} catch (error) {
 					webviewView.webview.postMessage({
 						type: "showMessage",
-						title: "casparの応答が不正なJSON形式です。",
+						title: "casparの考察でエラーが発生しました。。",
 						text: "エラーが発生したため再走します。エラー：" + error,
 						executor: "caspar",
 						error: "error",
