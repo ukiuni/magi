@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const provider = new MagiViewProvider(context.extensionUri, context);
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(
-			"myExtension.view",
+			"magi.main.view",
 			provider,
 		),
 	);
