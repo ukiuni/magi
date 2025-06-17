@@ -9,6 +9,7 @@ import { Balthasar } from './ai/Balthasar';
 import { Caspar } from './ai/Caspar';
 import { VSCodeLLM } from './llm/VSCodeLLM';
 import { error } from 'console';
+import { PhaseInfo } from './magi/PhaseInfo';
 
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new MagiViewProvider(context.extensionUri, context);
@@ -52,7 +53,11 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 					try {
 						llmExecutionCancelled = false;
 						cancelMessage = null;
-						treatLLM(webviewView, data.text);
+						if (lastPhaseInfo) {
+							treatLLM(webviewView, lastPhaseInfo.userPrompt, lastPhaseInfo.plan, lastPhaseInfo.melchiorExecutionHistory, lastPhaseInfo.rejectedLLMCommandResult, lastPhaseInfo.rejectReason);
+						}else {
+    						treatLLM(webviewView, data.text);
+						}
 					} catch (error) {
 						webviewView.webview.postMessage({
 							type: "showMessage",
@@ -65,16 +70,22 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 					}
 					break;
 				}
+				case "requestNewPhase": {
+					lastPhaseInfo = null;
+					this._context.workspaceState.update('webviewMessages', []);
+				}
 				case "cancel": {
 					llmExecutionCancelled = true;
 					break;
 				}
 				case "saveState": {
 					this._context.workspaceState.update('webviewMessages', data.messages);
+					this._context.workspaceState.update('lastPhaseInfo', lastPhaseInfo);
 					break;
 				}
 				case "requestState": {
 					const savedMessages = this._context.workspaceState.get('webviewMessages', []);
+					lastPhaseInfo = this._context.workspaceState.get('lastPhaseInfo', null);
 					webviewView.webview.postMessage({
 						type: "restoreState",
 						messages: savedMessages
@@ -151,12 +162,11 @@ async function loadModels() {
 }
 let errorCount = 0;
 
-async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string,
+async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, plan: string | void,
 toolResultHistory: ToolResult[] = [], rejectedLLMCommandResult:
 LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
 {
-	let plan: string | void = "";
-	if (!llmExecutionCancelled) {
+	if (!llmExecutionCancelled && !plan) {
 		webviewView.webview.postMessage({
 			type: "showMessage",
 			text: "実行計画の策定を開始します。",
@@ -164,7 +174,7 @@ LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
 			saveState: true,
 			systemInfo: true
 		});
-		plan = await phase(false, webviewView, userPrompt, plan, toolResultHistory, rejectedLLMCommandResult, rejectReason);
+		plan = await phase(false, webviewView, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
 	}
 	if (!llmExecutionCancelled) {
 		webviewView.webview.postMessage({
@@ -187,6 +197,7 @@ function showCanceled(webviewView: vscode.WebviewView) {
 		saveState: true
 	});
 }
+let lastPhaseInfo: PhaseInfo | null = null; 
 async function sleepAtError() {
 	await new Promise(resolve => setTimeout(resolve, 2000)); // 2秒待つ
 }
@@ -196,6 +207,14 @@ rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason:
 LLMCommandResult | null = null): Promise<string | void> {
 	if(llmExecutionCancelled) {
 		showCanceled(webviewView);
+		lastPhaseInfo = new PhaseInfo({
+			execution,
+			userPrompt,
+			plan,
+			melchiorExecutionHistory,
+			rejectedLLMCommandResult,
+			rejectReason
+		});
 		return;
 	}
 
@@ -418,6 +437,15 @@ LLMCommandResult | null = null): Promise<string | void> {
 						title: execution ? "⭕️ casparが処理完了を確認しました。" : "⭕️ casparが実行計画を承認しました。",
 						text: execution ? casparResult.args[0] : "実行計画:\n" + melchiorToolResult.llmCommandResult.args[1] + "\n\n承認根拠\n:" + casparResult.args[0],
 						executor: "caspar"
+					});
+					const nextPlan = execution ? "" : plan; // reset plan when all execution finished; 
+					lastPhaseInfo = new PhaseInfo({
+						execution,
+						userPrompt,
+						plan:nextPlan,
+						melchiorExecutionHistory,
+						rejectedLLMCommandResult,
+						rejectReason
 					});
 					return melchiorToolResult.llmCommandResult.args[0];
 				} else if (casparResult.tool === "rejectExecution") {

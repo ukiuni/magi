@@ -22,7 +22,9 @@ function restoreRegisterInputValue() {
     if (state && state[REGISTER_INPUT_KEY]) {
         registerInput.value = state[REGISTER_INPUT_KEY];
         const displayText = document.getElementById('display-text');
-        if (displayText) displayText.textContent = registerInput.value;
+        if (displayText) {
+            displayText.textContent = registerInput.value;
+        }
     }
 }
 
@@ -108,8 +110,11 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelButton.style.display = 'block';
         const value = registerInput.value;
         if (value) {
+            const displayText = document.getElementById('display-text');
+            if (displayText) {
+                displayText.textContent = value;
+            }
             registerInput.value = ""; 
-            // --- 追加: 送信時に保存内容クリア ---
             vscode.setState({ ...vscode.getState(), [REGISTER_INPUT_KEY]: '' });
         }
         vscode.postMessage({
@@ -120,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelButton.addEventListener("click", () => {
         registerButton.disabled = false;
         cancelButton.style.display = 'none';
-        // キャンセル時も実行状態をリセット、魔法の中断
         executing = false;
         document.body.classList.remove('executing');
         vscode.postMessage({
@@ -156,9 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
         type: "requestState"
     });
 
-    // --- 追加: 初期化時に復元 ---
     restoreRegisterInputValue();
-
     registerInput.focus();
 });
 
@@ -203,19 +205,17 @@ function updateDisplay() {
 }
 createPaneFromMessage = (message, appendsClass) => {
     if(message.systemInfo) {
-        return  `<div class="${message.error ? "error":"message"} systemMessage">${message.text}</div>`;
+        return `<div class="${message.error ? "error":"message"} systemMessage">${message.text}</div>`;
     }
     return `<div class="${message.error ? "error":"message"} ${message.executor} ${appendsClass}"><div class="messageTitle">${message.title}</div><div class="messageText">${message.text}</div></div>`;
 }
 let executing = false;
 function executionStarted() {
     executing = true;
-    // プログレスバー表示のため、bodyにexecutingクラスを追加、魔法の始まり
     document.body.classList.add('executing');
 }
 function executionEnded() {
     executing = false;
-    // プログレスバー非表示のため、bodyからexecutingクラスを削除、魔法の終わり
     document.body.classList.remove('executing');
     cancelButton.click();
     saveStateToVSCode();
@@ -229,7 +229,6 @@ window.addEventListener("message", (event) => {
             if (message.saveState) {
                 saveStateToVSCode();
             }
-            // 実行開始状態を設定、星の輝きが始まる
             executionStarted();
             break;
         }
@@ -321,13 +320,12 @@ function createNewTaskButton() {
             displayText.textContent = '';
         }
         vscode.postMessage({
-            type: "saveState",
-            messages: []
+            type: "requestNewPhase"
         });
+        
         newTaskButton.remove();
         newTaskButton = null;
         registerInput.focus();
-        // 実行状態をリセット、静寂が戻る
         executing = false;
         document.body.classList.remove('executing');
     });
