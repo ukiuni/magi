@@ -196,6 +196,9 @@ function showCanceled(webviewView: vscode.WebviewView) {
 		executor: "user",
 		saveState: true
 	});
+	webviewView.webview.postMessage({
+		type: "canceled"
+	});
 }
 let lastPhaseInfo: PhaseInfo | null = null; 
 async function sleepAtError() {

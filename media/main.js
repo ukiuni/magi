@@ -254,6 +254,10 @@ window.addEventListener("message", (event) => {
         case "settingsSaved": {
             return; 
         }
+        case "canceled": {
+            executionEnded();
+            return; 
+        }
     }
     updateDisplay(); 
 });
