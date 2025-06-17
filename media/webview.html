@@ -12,115 +12,66 @@
   <style>
     
     body {
-      
       margin: 0;
-      
       padding: 60px 10px 10px 10px;
-      
       height: 100vh;
-      
       display: flex;
-      
       flex-direction: column;
-      
       box-sizing: border-box;
     }
 
     
     .fixed-display-area {
-      
       position: fixed;
-      
       top: 0;
-      
       left: 0;
-      
       right: 0;
-      
       width: 100%;
-      
       background-color: #1a1a1a;
-      
       border-bottom: 2px solid #333;
-      
       padding: 10px;
-      
       box-sizing: border-box;
-      
       color: white;
-      
       font-size: 14px;
-      
       min-height: 40px;
-      
       max-height: 120px;
-      
       overflow-y: auto;
-      
       white-space: normal;
-      
       word-wrap: break-word;
-      
       z-index: 1000;
-      
       transition: height 0.2s ease;
     }
-
-    
     .fixed-display-area.collapsed {
-      
       height: 40px;
-      
       max-height: 40px;
     }
-
-    
     .fixed-display-area.collapsed .display-text {
-      
       white-space: nowrap;
-      
       overflow: hidden;
-      
       text-overflow: ellipsis;
-      
       max-width: calc(100% - 50px);
-      
       display: inline-block;
-      
       vertical-align: top;
-      
       line-height: 20px;
     }
 
     
     .toggle-button {
-      
       background: none;
-      
       border: none;
-      
       color: #888;
-      
       cursor: pointer;
-      
       font-size: 12px;
-      
       padding: 2px 4px;
-      
       margin-right: 8px;
-      
       border-radius: 3px;
-      
       vertical-align: top;
-      
       display: inline-block;
       background-color: rgba(255, 255, 255, 0.1);
     }
 
     
     .toggle-button:hover {
-      
-      
       color: #ccc;
     }
 
@@ -129,48 +80,27 @@
       font-size: 12px;
       display: inline;
     }
-
-    
     .content {
-      
       flex: 1;
-      
       overflow-y: auto;
     }
-
-    
     .input-area {
-      
+      position: relative;
       display: flex;
-      
       flex-direction: column;
-      
       margin-top: 10px;
     }
-
-    
     .button-row {
-      
       display: flex;
-      
       justify-content: flex-end;
-      
       width: 100%;
     }
-
-    
-    #register-input {
-      
+    #register-input {      
       width: 100%;
-      
       box-sizing: border-box;
-      
       resize: vertical;
-      
       font-family: inherit;
-      
       font-size: 12px;
-      
       padding: 8px;
       background-color: #00333333;
       color: white;
@@ -178,47 +108,28 @@
 
     
     .error {
-      
       display: block;
-      
       color: #ff6b6b;
-      
       background-color: rgba(255, 107, 107, 0.1);
-      
       border: 1px solid #ff6b6b;
-      
       border-radius: 4px;
-      
       padding: 8px 12px;
-      
       margin: 8px 0;
-      
       font-size: 12px;
-      
       font-weight: 500;
-      
       border-left: 4px solid #ff6b6b;
     }
 
     
     .message {
-      
       display: block;
-      
       color: white;
-      
       background-color: rgba(78, 205, 196, 0.1);
-      
       border: 1px solid #999999;
-      
       border-radius: 4px;
-      
       padding: 8px 12px;
-      
       margin: 2px 0;
-      
       font-size: 12px;
-      
       font-weight: 500;
       margin-bottom: 5px;
     }
@@ -493,6 +404,48 @@
     }
 
     
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: #000;
+      display: none;
+      overflow: hidden;
+    }
+    
+    body.executing .progress-bar {
+      display: block;
+    }
+    
+    .progress-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #000 0%, #000 100%);
+      animation: progressWave 4s infinite linear;
+      transform: translateX(-100%);
+    }
+    
+    @keyframes progressWave {
+      0% {
+        transform: translateX(-100%);
+        background: linear-gradient(270deg, #999 0%, #999 100%);
+      }
+      50% {
+        transform: translateX(-100%);
+        background: linear-gradient(270deg, #999 0%, #000 100%);
+      }
+      100% {
+        transform: translateX(200%);
+        background: linear-gradient(270deg, #000 0%, #000 100%);
+      }
+      
+    }
   </style>
 </head>
 
@@ -513,6 +466,9 @@
   </div>
   
   <div class="input-area">
+    
+    <!-- プログレスバー要素、時の流れ -->
+    <div class="progress-bar" id="progress-bar"></div>
     
     <button id="cancel-button">キャンセル</button>
     

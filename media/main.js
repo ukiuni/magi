@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     registerButton.addEventListener("click", () => {
-        if(executiing) {
+        if(executing) {
             return;
         }
         const existingNewTaskButton = document.getElementById('new-task-button');
@@ -126,6 +126,9 @@ document.addEventListener('DOMContentLoaded', function() {
     cancelButton.addEventListener("click", () => {
         registerButton.disabled = false;
         cancelButton.style.display = 'none';
+        // キャンセル時も実行状態をリセット、魔法の中断
+        executing = false;
+        document.body.classList.remove('executing');
         vscode.postMessage({
             type: "cancel"
         });
@@ -207,12 +210,16 @@ createPaneFromMessage = (message, appendsClass) => {
     }
     return `<div class="${message.error ? "error":"message"} ${message.executor} ${appendsClass}"><div class="messageTitle">${message.title}</div><div class="messageText">${message.text}</div></div>`;
 }
-let executiing = false;
+let executing = false;
 function executionStarted() {
-    let executiing = true;
+    executing = true;
+    // プログレスバー表示のため、bodyにexecutingクラスを追加、魔法の始まり
+    document.body.classList.add('executing');
 }
 function executionEnded() {
-    let executiing = false;
+    executing = false;
+    // プログレスバー非表示のため、bodyからexecutingクラスを削除、魔法の終わり
+    document.body.classList.remove('executing');
     cancelButton.click();
     saveStateToVSCode();
     createNewTaskButton();
@@ -225,7 +232,8 @@ window.addEventListener("message", (event) => {
             if (message.saveState) {
                 saveStateToVSCode();
             }
-            executiing = true;
+            // 実行開始状態を設定、星の輝きが始まる
+            executionStarted();
             break;
         }
         case "complete": {
@@ -307,13 +315,13 @@ function createNewTaskButton() {
         newTaskButton.style.backgroundColor = 'lightblue';
     });
     newTaskButton.addEventListener('click', () => {
-        items = []; 
+        items = [];
         if (list) {
-            list.innerHTML = ''; 
+            list.innerHTML = '';
         }
         const displayText = document.getElementById('display-text');
         if (displayText) {
-            displayText.textContent = ''; 
+            displayText.textContent = '';
         }
         vscode.postMessage({
             type: "saveState",
@@ -322,7 +330,9 @@ function createNewTaskButton() {
         newTaskButton.remove();
         newTaskButton = null;
         registerInput.focus();
-        executiing = false;
+        // 実行状態をリセット、静寂が戻る
+        executing = false;
+        document.body.classList.remove('executing');
     });
     const inputArea = registerInput.parentElement;
     inputArea.insertBefore(newTaskButton, registerInput);
