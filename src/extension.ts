@@ -8,6 +8,7 @@ import { Melchior } from './ai/Melchior';
 import { Balthasar } from './ai/Balthasar';
 import { Caspar } from './ai/Caspar';
 import { VSCodeLLM } from './llm/VSCodeLLM';
+import { error } from 'console';
 
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new MagiViewProvider(context.extensionUri, context);
@@ -20,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 var llmExecutionCancelled = false; 
-
+var cancelMessage: string | null = null;
 class MagiViewProvider implements vscode.WebviewViewProvider {
 	private _view?: vscode.WebviewView;
 	private _context: vscode.ExtensionContext;
@@ -50,11 +51,12 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 				case "promptSended": {
 					try {
 						llmExecutionCancelled = false;
+						cancelMessage = null;
 						treatLLM(webviewView, data.text);
 					} catch (error) {
 						webviewView.webview.postMessage({
 							type: "showMessage",
-							title: "システムエラーが発生しました。",
+							title: "MAGIにエラーが発生しました。",
 							text: "処理中にエラーが発生しました: " + error,
 							executor: "system",
 							error: "error",
@@ -147,6 +149,7 @@ async function loadModels() {
 	const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
 	return models;
 }
+let errorCount = 0;
 
 async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string,
 toolResultHistory: ToolResult[] = [], rejectedLLMCommandResult:
@@ -175,16 +178,18 @@ LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
 	}
 }
 
-function showCanceled(webviewView: vscode.WebviewView,) {
+function showCanceled(webviewView: vscode.WebviewView) {
 	webviewView.webview.postMessage({
 		type: "showMessage",
-		title: "ユーザによる処理キャンセルが実行されました。",
-		text: "処理がキャンセルされました。",
+		title: "処理キャンセルが実行されました。",
+		text: cancelMessage || "処理がキャンセルされました。",
 		executor: "user",
 		saveState: true
 	});
 }
-
+async function sleepAtError() {
+	await new Promise(resolve => setTimeout(resolve, 2000)); // 2秒待つ
+}
 async function phase(execution: boolean, webviewView: vscode.WebviewView,
 userPrompt: string, plan: string, melchiorExecutionHistory: ToolResult[] = [],
 rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason:
@@ -215,6 +220,7 @@ LLMCommandResult | null = null): Promise<string | void> {
 		} else {
 			[melchiorCommand, melchiorResponseText] = await melchior.plan(context);
 		}
+		errorCount = 0;
 	} catch (error) {
 		webviewView.webview.postMessage({
 			type: "showMessage",
@@ -230,6 +236,14 @@ LLMCommandResult | null = null): Promise<string | void> {
 			executionSummary: "melchiorの考察でエラーが発生しました。",
 			executionDescription: "melchiorの考察に失敗しました。" + error
 		});
+		errorCount++;
+		if (errorCount >= 3) {
+		    cancelMessage = "エラーが連続して発生しているため処理を中止します。";
+			llmExecutionCancelled = true;
+		} else {
+            await sleepAtError();
+		}
+		
 		return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, null, rejectReason);
 	}
 
@@ -253,6 +267,7 @@ LLMCommandResult | null = null): Promise<string | void> {
         rejectReason = rejectedLLMCommandResult = null;
 		try{
 			[bartasaleResult]= await balthasar.ask(balthasarContext, melchiorResponseText, bartasarExecuteTools, execution);
+			errorCount = 0;
 		} catch (error) {
 			webviewView.webview.postMessage({
 				type: "showMessage",
@@ -262,6 +277,13 @@ LLMCommandResult | null = null): Promise<string | void> {
 				error: "error",
 				saveState: true 
 			});
+			errorCount++;
+			if (errorCount >= 3) {
+				cancelMessage = "エラーが連続して発生しているため処理を中止します。";
+				llmExecutionCancelled = true;
+			} else {
+				await sleepAtError();
+			}
 			continue;
 		}
 		if (bartasaleResult.tool === "rejectExecution") {
@@ -371,6 +393,7 @@ LLMCommandResult | null = null): Promise<string | void> {
 					} else {
 						[casparResult] = await caspar.decidingToimplementThePlan(casparContext, melchiorToolResult.llmCommandResult.args[0]);
 					}
+					errorCount = 0;
 				} catch (error) {
 					webviewView.webview.postMessage({
 						type: "showMessage",
@@ -380,6 +403,13 @@ LLMCommandResult | null = null): Promise<string | void> {
 						error: "error",
 						saveState: true
 					});
+					errorCount++;
+					if (errorCount >= 3) {
+						cancelMessage = "エラーが連続して発生しているため処理を中止します。";
+						llmExecutionCancelled = true;
+					} else {
+						await sleepAtError();
+					}
 					continue;
 				}
 				if (casparResult.tool === "approveExecution") {

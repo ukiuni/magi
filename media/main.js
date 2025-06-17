@@ -1,5 +1,3 @@
-// main.js
-
 const vscode = acquireVsCodeApi();
 
 let items = [];
@@ -11,17 +9,14 @@ let settingsModal, settingsCancelButton, settingsCompleteButton;
 let languageSelect, melchiorModelSelect, balthasarModelSelect,
 casparModelSelect;
 
-// --- 追加: register-input保存用キー ---
 const REGISTER_INPUT_KEY = 'registerInputValue';
 
-// --- 追加: 保存関数 ---
 function saveRegisterInputValue() {
     if (registerInput && registerInput.value) {
         vscode.setState({ ...vscode.getState(), [REGISTER_INPUT_KEY]: registerInput.value });
     }
 }
 
-// --- 追加: 復元関数 ---
 function restoreRegisterInputValue() {
     const state = vscode.getState();
     if (state && state[REGISTER_INPUT_KEY]) {
@@ -62,7 +57,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(updateFixedDisplay, 10);
     });
 
-    // --- 追加: 入力時に保存 ---
     registerInput.addEventListener('input', saveRegisterInputValue);
 
     function toggleCollapse() {
@@ -183,6 +177,9 @@ function restoreState(messages) {
         cancelButton.style.display = 'none';
     }
     updateDisplay();
+    requestAnimationFrame(() => {
+        list.lastElementChild.scrollIntoView({ behavior: 'auto', block: 'end' });
+    });
 }
 
 function updateDisplay() {
@@ -194,14 +191,14 @@ function updateDisplay() {
         const contentRect = contentDiv.getBoundingClientRect();
         const lastRect = lastElement.getBoundingClientRect();
         const isVisible = (
-            lastRect.top < contentRect.height + lastRect.height
+            lastRect.top < contentRect.height + lastRect.height // 100 is buffer
         );
         if (!isVisible) {
             return;
         }
     }
     requestAnimationFrame(() => {
-        lastElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        list.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
     });
 }
 createPaneFromMessage = (message, appendsClass) => {
