@@ -12,7 +12,7 @@ export class CreateFileTool implements Tool {
     }
     
     execute(llmCommandResult: LLMCommandResult) {
-        return new Promise<ToolResult>(async (resolve) => {
+        return new Promise<ToolResult>(async (resolve, reject) => {
             try {
                 
                 if (!llmCommandResult.args[0]) {
@@ -50,7 +50,13 @@ export class CreateFileTool implements Tool {
                 try {
                     await vscode.workspace.fs.createDirectory(dirUri);
                 } catch (error) {
-                    
+                    resolve({
+                        displayMessage: "ファイルの書き込みに失敗しました。",
+                        displayCommand: "showMessage",
+                        result: "error",
+                        resultDetail: "ディレクトリの作成に失敗しました。",
+                        llmCommandResult: llmCommandResult 
+                    });
                 }
 
                 
