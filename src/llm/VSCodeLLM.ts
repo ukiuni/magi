@@ -3,16 +3,25 @@ import { LLM } from './LLM';
 import * as vscode from 'vscode';
 
 export class VSCodeLLM implements LLM {
+    private modelName: string;
+
+    constructor(modelName?: string) {
+        this.modelName = modelName || 'gpt-5-mini';
+    }
 
     async think(prompt: string): Promise<string> {
         return new Promise<string>(async (resolve, reject) => {
-            let [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
+            let models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+            let model = models.find(m => m.name === this.modelName);
+
             if (!model) {// retry for selectChatModels nees time to be ready
-                console.warn("No available model found. Retrying...");
+                console.warn(`Model ${this.modelName} not found. Retrying...`);
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                [model] = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
+                models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+                model = models.find(m => m.name === this.modelName);
                 if (!model) {
-                    reject(new Error("No available model found after retry.")); 
+                    reject(new Error(`Model ${this.modelName} not found after retry.`));
+                    return;
                 }
             }
             try {
