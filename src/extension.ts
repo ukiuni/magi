@@ -54,9 +54,9 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 						llmExecutionCancelled = false;
 						cancelMessage = null;
 						if (lastPhaseInfo) {
-							treatLLM(webviewView, lastPhaseInfo.userPrompt, lastPhaseInfo.plan, lastPhaseInfo.melchiorExecutionHistory, lastPhaseInfo.rejectedLLMCommandResult, lastPhaseInfo.rejectReason);
+							treatLLM(webviewView, this._context, lastPhaseInfo.userPrompt, lastPhaseInfo.plan, lastPhaseInfo.melchiorExecutionHistory, lastPhaseInfo.rejectedLLMCommandResult, lastPhaseInfo.rejectReason);
 						}else {
-    						treatLLM(webviewView, data.text);
+    						treatLLM(webviewView, this._context, data.text);
 						}
 					} catch (error) {
 						webviewView.webview.postMessage({
@@ -96,9 +96,9 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 					try {
 						const models = await loadModels();
 						const defaultModel = models.find(model =>
-							model.vendor === 'copilot' && model.family === 'gpt-4.1'
+							model.name === 'gpt-5-mini'
 						);
-						const defaultModelName = defaultModel ? defaultModel.name : '';
+						const defaultModelName = defaultModel ? defaultModel.name : (models.length > 0 ? models[0].name : '');
 						const currentSettings = this._context.workspaceState.get('userSettings', {
 							language: 'ja',
 							melchiorModel: defaultModelName,
@@ -157,12 +157,12 @@ class MagiViewProvider implements vscode.WebviewViewProvider {
 }
 
 async function loadModels() {
-	const models = await vscode.lm.selectChatModels({ vendor: 'copilot', family: 'gpt-4.1' });
+	const models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
 	return models;
 }
 let errorCount = 0;
 
-async function treatLLM(webviewView: vscode.WebviewView, userPrompt: string, plan: string | void,
+async function treatLLM(webviewView: vscode.WebviewView, context: vscode.ExtensionContext, userPrompt: string, plan: string | void,
 toolResultHistory: ToolResult[] = [], rejectedLLMCommandResult:
 LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
 {
@@ -174,7 +174,7 @@ LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
 			saveState: true,
 			systemInfo: true
 		});
-		plan = await phase(false, webviewView, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
+		plan = await phase(false, webviewView, context, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
 	}
 	if (!llmExecutionCancelled) {
 		webviewView.webview.postMessage({
@@ -184,7 +184,7 @@ LLMCommandResult | null = null, rejectReason: LLMCommandResult | null = null)
 			saveState: true,
 			systemInfo: true
 		});
-		phase(true, webviewView, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
+		phase(true, webviewView, context, userPrompt, plan!, toolResultHistory, rejectedLLMCommandResult, rejectReason);
 	}
 }
 
@@ -204,7 +204,7 @@ let lastPhaseInfo: PhaseInfo | null = null;
 async function sleepAtError() {
 	await new Promise(resolve => setTimeout(resolve, 2000)); // 2秒待つ
 }
-async function phase(execution: boolean, webviewView: vscode.WebviewView,
+async function phase(execution: boolean, webviewView: vscode.WebviewView, extensionContext: vscode.ExtensionContext,
 userPrompt: string, plan: string, melchiorExecutionHistory: ToolResult[] = [],
 rejectedLLMCommandResult: LLMCommandResult | null = null, rejectReason:
 LLMCommandResult | null = null): Promise<string | void> {
@@ -221,9 +221,17 @@ LLMCommandResult | null = null): Promise<string | void> {
 		return;
 	}
 
-	const melchiorLLM = new VSCodeLLM();
-	const balthasarLLM = new VSCodeLLM();
-	const casparLLM = new VSCodeLLM();
+	// 保存された設定を取得
+	const userSettings = extensionContext.workspaceState.get('userSettings', {
+		language: 'ja',
+		melchiorModel: 'gpt-5-mini',
+		balthasarModel: 'gpt-5-mini',
+		casparModel: 'gpt-5-mini'
+	});
+
+	const melchiorLLM = new VSCodeLLM(userSettings.melchiorModel);
+	const balthasarLLM = new VSCodeLLM(userSettings.balthasarModel);
+	const casparLLM = new VSCodeLLM(userSettings.casparModel);
 	const melchior = new Melchior(melchiorLLM);
 	const balthasar = new Balthasar(balthasarLLM);
 	const caspar = new Caspar(casparLLM);
@@ -266,7 +274,7 @@ LLMCommandResult | null = null): Promise<string | void> {
             await sleepAtError();
 		}
 		
-		return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, null, rejectReason);
+		return phase(execution, webviewView, extensionContext, userPrompt, plan, melchiorExecutionHistory, null, rejectReason);
 	}
 
 	let bartasarApproved = false;
@@ -379,7 +387,7 @@ LLMCommandResult | null = null): Promise<string | void> {
 				executionSummary: "melchiorが不正なコマンドを実行しようとしています。",
 				executionDescription: melchiorCommand.tool + "は存在しないコマンドです。"
 			});
-			return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
+			return phase(execution, webviewView, extensionContext, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
 		}
 		const melchiorToolResult = await melchiorExecuteTool.execute(melchiorCommand);
 		const isMelchiorDoClosingTool = (melchiorExecuteTool.name === "recommendComplete" && execution) || (melchiorExecuteTool.name === "planProposal" && !execution)
@@ -497,5 +505,5 @@ LLMCommandResult | null = null): Promise<string | void> {
 			}
 		}
 	}
-	return phase(execution, webviewView, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
+	return phase(execution, webviewView, extensionContext, userPrompt, plan, melchiorExecutionHistory, rejectedLLMCommandResult, rejectReason);
 }

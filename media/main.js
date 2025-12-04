@@ -284,8 +284,8 @@ function populateModelOptions(selectElement, models) {
     models.forEach(model => {
         const option = document.createElement('option');
         option.value = model.name;
-        option.disabled = !(model.family === 'gpt-4.1');
-        option.selected = model.family === 'gpt-4.1';
+        option.disabled = false;
+        option.selected = model.name === 'gpt-5-mini';
         option.textContent = `${model.name} (${model.family})`;
         selectElement.appendChild(option);
     });
