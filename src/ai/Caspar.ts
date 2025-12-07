@@ -1,9 +1,9 @@
-import { LLM } from '../llm/LLM';
-import { PromptContext } from './PromptContext';
-import { ToolResult } from '../tools/ToolInterface';
-import { LLMCommandResult } from '../llm/LLMCommandResult';
-import { getAllTools } from '../tools/ToolFactory';
-import { createAllToolsPrompt, createAllToolsDescriptionPrompt, createToolExecutionHistoryPrompt, createMAGIDescriptionPrompt } from './PromptUtils';
+import { LLM } from '../llm/LLM.js';
+import { PromptContext } from './PromptContext.js';
+import { ToolResult } from '../tools/ToolInterface.js';
+import { LLMCommandResult } from '../llm/LLMCommandResult.js';
+import { getAllTools } from '../tools/ToolFactory.js';
+import { createAllToolsPrompt, createAllToolsDescriptionPrompt, createToolExecutionHistoryPrompt, createMAGIDescriptionPrompt } from './PromptUtils.js';
 
 export class Caspar {
     private llm: LLM;

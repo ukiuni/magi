@@ -2,7 +2,8 @@
   "name": "magi",
   "displayName": "MAGI",
   "description": "AI Agent with MAGI",
-  "version": "0.1.5",
+  "version": "0.1.6",
+  "type": "module",
   "license": "MIT",
   "publisher": "ukiuni",
   "engines": {
@@ -55,19 +56,26 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
+    "test:e2e": "NODE_OPTIONS='--loader ts-node/esm --no-warnings=ExperimentalWarning' mocha test/e2e/**/*.test.ts --timeout 10000 --require test/setup.ts",
+    "test:unit": "NODE_OPTIONS='--loader ts-node/esm --no-warnings=ExperimentalWarning' mocha test/unit/**/*.test.ts --timeout 10000 --require test/setup.ts",
     "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/sinon": "^10.0.14",
     "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.25.1",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "vsce": "^2.15.0"
+    "vsce": "^2.15.0",
+    "vscode": "file:./test/vscode-mock"
   },
   "dependencies": {
     "yaml": "^2.8.0"

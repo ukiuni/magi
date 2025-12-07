@@ -1,4 +1,4 @@
-import { LLMCommandResult } from '../llm/LLMCommandResult';
+import { LLMCommandResult } from '../llm/LLMCommandResult.js';
 
 
 export type AiName = "melchior" | "balthasar" | "caspar";

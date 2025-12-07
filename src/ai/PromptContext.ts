@@ -1,5 +1,5 @@
-import { ToolResult } from '../tools/ToolInterface';
-import { LLMCommandResult } from '../llm/LLMCommandResult';
+import { ToolResult } from '../tools/ToolInterface.js';
+import { LLMCommandResult } from '../llm/LLMCommandResult.js';
 
 export class PromptContext {
     userPrompt: string;

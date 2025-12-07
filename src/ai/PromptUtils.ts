@@ -1,5 +1,5 @@
-import { AiName, Tool } from '../tools/ToolInterface';
-import { ToolResult } from '../tools/ToolInterface';
+import { AiName, Tool } from '../tools/ToolInterface.js';
+import { ToolResult } from '../tools/ToolInterface.js';
 import YAML from 'yaml';
 export function createAllToolsPrompt(toolsForAI: Tool[]): string{
 	return toolsForAI.map(tool => tool.name).join(', ');

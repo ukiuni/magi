@@ -1,15 +1,14 @@
 import * as vscode from 'vscode';
 import { TextDecoder } from 'util';
-import { LLMCommandResult } from './llm/LLMCommandResult';
-import { createTool } from './tools/ToolFactory';
-import { ToolResult } from './tools/ToolInterface';
-import { PromptContext } from './ai/PromptContext';
-import { Melchior } from './ai/Melchior';
-import { Balthasar } from './ai/Balthasar';
-import { Caspar } from './ai/Caspar';
-import { VSCodeLLM } from './llm/VSCodeLLM';
-import { error } from 'console';
-import { PhaseInfo } from './magi/PhaseInfo';
+import { LLMCommandResult } from './llm/LLMCommandResult.js';
+import { createTool } from './tools/ToolFactory.js';
+import { ToolResult } from './tools/ToolInterface.js';
+import { PromptContext } from './ai/PromptContext.js';
+import { Melchior } from './ai/Melchior.js';
+import { Balthasar } from './ai/Balthasar.js';
+import { Caspar } from './ai/Caspar.js';
+import { VSCodeLLM } from './llm/VSCodeLLM.js';
+import { PhaseInfo } from './magi/PhaseInfo.js';
 
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new MagiViewProvider(context.extensionUri, context);

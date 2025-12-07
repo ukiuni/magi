@@ -1,5 +1,5 @@
-import { LLMCommandResult } from "../llm/LLMCommandResult"; // 魔法の橋渡し
-import { Tool, ToolResult, AiName } from "./ToolInterface"; // 契約の定義書
+import { LLMCommandResult } from "../llm/LLMCommandResult.js"; // 魔法の橋渡し
+import { Tool, ToolResult, AiName } from "./ToolInterface.js"; // 契約の定義書
 const planMarkdownTable = `
 `;
 export class PlanProposalTool implements Tool {

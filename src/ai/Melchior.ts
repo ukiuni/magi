@@ -1,10 +1,10 @@
-import { LLM } from '../llm/LLM';
-import { PromptContext } from './PromptContext';
-import { AiName } from '../tools/ToolInterface';
-import { LLMCommandResult } from '../llm/LLMCommandResult';
-import { getAllTools } from '../tools/ToolFactory';
-import { createToolExecutionHistoryPrompt, createAllToolsDescriptionPrompt, createToolsPrompt, createAllToolsPrompt, createMAGIDescriptionPrompt} from './PromptUtils';
-import { PlanProposalTool } from '../tools/PlanProposalTool';
+import { LLM } from '../llm/LLM.js';
+import { PromptContext } from './PromptContext.js';
+import { AiName } from '../tools/ToolInterface.js';
+import { LLMCommandResult } from '../llm/LLMCommandResult.js';
+import { getAllTools } from '../tools/ToolFactory.js';
+import { createToolExecutionHistoryPrompt, createAllToolsDescriptionPrompt, createToolsPrompt, createAllToolsPrompt, createMAGIDescriptionPrompt} from './PromptUtils.js';
+import { PlanProposalTool } from '../tools/PlanProposalTool.js';
 
 export class Melchior {
     private llm: LLM;

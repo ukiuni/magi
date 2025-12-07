@@ -1,5 +1,5 @@
-import { LLMCommandResult } from "../llm/LLMCommandResult"; 
-import { Tool, ToolResult, AiName } from "./ToolInterface"; 
+import { LLMCommandResult } from "../llm/LLMCommandResult.js"; 
+import { Tool, ToolResult, AiName } from "./ToolInterface.js"; 
 
 export class ApproveExecutionTools implements Tool {
     name = "approveExecution"; 

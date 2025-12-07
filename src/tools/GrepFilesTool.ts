@@ -1,223 +1,91 @@
-import { LLMCommandResult } from "../llm/LLMCommandResult";
-import { Tool, ToolResult, AiName } from "./ToolInterface";
+import { LLMCommandResult } from "../llm/LLMCommandResult.js";
+import { Tool, ToolResult, AiName } from "./ToolInterface.js";
 import * as vscode from 'vscode';
 
+const testVscode: any = (globalThis as any).__VSCODE_MOCK__;
+const vscodeApi: any = testVscode || vscode;
+
 export class GrepFilesTool implements Tool {
-    name = "grepFiles";
-    description = "grepFilesコマンドは、現在のワークスペース内のファイルの内容を正規表現で検索するためのツールです。args1には検索したい正規表現パターンを、args2には検索対象ディレクトリ（省略時は全体）を指定してください。";
-    
-    
-    isForTool(aiName: AiName): boolean {
-        return true; 
+  name = 'grepFiles';
+  description = '指定したルートパスからファイルを再帰検索して正規表現にマッチする行を返します。args: [regex, path(optional, workspace-relative), maxDepth(optional)]';
+
+  isForTool(aiName: AiName): boolean { return true; }
+
+  async execute(llmCommandResult: LLMCommandResult): Promise<ToolResult> {
+    const args = llmCommandResult.args || [];
+    const pattern = args[0];
+    const maybePath = args[1];
+    const maxDepthArg = args[2];
+
+    if (!pattern) { return { displayMessage: 'エラー: 検索パターンが指定されていません', displayCommand: 'showMessage', result: 'error', resultDetail: '正規表現を指定してください。', llmCommandResult }; }
+
+    const wf = vscodeApi.workspace.workspaceFolders?.[0];
+    if (!wf) { return { displayMessage: 'エラー: ワークスペースが開かれていません', displayCommand: 'showMessage', result: 'error', resultDetail: 'ワークスペースを開いてください。', llmCommandResult }; }
+
+    const rootPath = maybePath ? String(maybePath) : '';
+    const normalized = rootPath ? String(rootPath).replace(/\\/g, '/').replace(/\/+/g, '/') : '';
+    if (normalized) {
+      if (normalized.includes('..') || normalized.startsWith('/') || normalized.includes(':')) {
+        return { displayMessage: `エラー: 無効なルートパスです: ${rootPath}`, displayCommand: 'showMessage', result: 'error', resultDetail: 'ワークスペース内の相対パスを指定してください。', llmCommandResult };
+      }
     }
-    
-    execute(llmCommandResult: LLMCommandResult) {
-        return new Promise<ToolResult>(async (resolve) => {
-            try {
-                if (!llmCommandResult.args[0]) {
-                    resolve({
-                        displayMessage: "エラー: 検索パターンが指定されていません",
-                        displayCommand: "showMessage",
-                        result: "error",
-                        resultDetail: "正規表現パターンを指定してください。",
-                        llmCommandResult: llmCommandResult 
-                    });
-                    return;
-                }
 
-                const searchPattern = llmCommandResult.args[0];
-                const targetDirectory = llmCommandResult.args[1] || ''; 
+    const rootUri = normalized ? (vscodeApi.Uri || vscode.Uri).joinPath(wf.uri, normalized) : wf.uri;
+    try {
+      const s = await vscode.workspace.fs.stat(rootUri);
+      if (!(s.type & vscode.FileType.Directory)) { throw new Error('not dir'); }
+    } catch (e) {
+      return { displayMessage: `エラー: ルート '${rootPath || '.'}' が存在しません`, displayCommand: 'showMessage', result: 'error', resultDetail: '存在するディレクトリを指定してください。', llmCommandResult };
+    }
 
-                
-                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-                if (!workspaceFolder) {
-                    resolve({
-                        displayMessage: "エラー: ワークスペースが開かれていません",
-                        displayCommand: "showMessage",
-                        result: "error",
-                        resultDetail: "ワークスペースを開いてから再試行してください。",
-                        llmCommandResult: llmCommandResult 
-                    });
-                    return;
-                }
+    let maxDepth = Number.POSITIVE_INFINITY;
+    if (maxDepthArg !== undefined && maxDepthArg !== null && String(maxDepthArg).trim() !== '') {
+      const n = parseInt(String(maxDepthArg), 10);
+      if (!isNaN(n) && n >= 0) { maxDepth = n; }
+    }
 
-                
-                if (targetDirectory) {
-                    
-                    const normalizedPath = targetDirectory.replace(/\\/g, '/').replace(/\/+/g, '/');
-                    
-                    
-                    if (normalizedPath.includes('..') || normalizedPath.startsWith('/') || normalizedPath.includes(':')) {
-                        resolve({
-                            displayMessage: `エラー: 無効なディレクトリパスです: ${targetDirectory}`,
-                            displayCommand: "showMessage",
-                            result: "error",
-                            resultDetail: "ワークスペース外のディレクトリや親ディレクトリへのアクセスは禁止されています。",
-                            llmCommandResult: llmCommandResult 
-                        });
-                        return;
-                    }
+    let rx: RegExp;
+    try { rx = new RegExp(String(pattern), 'gu'); } catch (e) { return { displayMessage: `エラー: 無効な正規表現 '${pattern}'`, displayCommand: 'showMessage', result: 'error', resultDetail: String(e), llmCommandResult }; }
 
-                    
-                    try {
-                        const targetUri = vscode.Uri.joinPath(workspaceFolder.uri, normalizedPath);
-                        const stat = await vscode.workspace.fs.stat(targetUri);
-                        if (!(stat.type & vscode.FileType.Directory)) {
-                            resolve({
-                                displayMessage: `エラー: 指定されたパスはディレクトリではありません: ${targetDirectory}`,
-                                displayCommand: "showMessage",
-                                result: "error",
-                                resultDetail: "ディレクトリパスを指定してください。",
-                                llmCommandResult: llmCommandResult 
-                            });
-                            return;
-                        }
-                    } catch (error) {
-                        resolve({
-                            displayMessage: `エラー: 指定されたディレクトリが存在しません: ${targetDirectory}`,
-                            displayCommand: "showMessage",
-                            result: "error",
-                            resultDetail: "存在するディレクトリパスを指定してください。",
-                            llmCommandResult: llmCommandResult 
-                        });
-                        return;
-                    }
-                }
+    const decoder = new TextDecoder();
+    const results: Array<{ file: string; line: number; text: string; match: string }> = [];
 
-                
-                let regex: RegExp;
-                try {
-                    regex = new RegExp(searchPattern, 'gm'); 
-                } catch (error) {
-                    resolve({
-                        displayMessage: `エラー: 無効な正規表現パターンです: ${searchPattern}`,
-                        displayCommand: "showMessage",
-                        result: "error",
-                        resultDetail: `正規表現が無効です: ${error instanceof Error ? error.message : String(error)}`,
-                        llmCommandResult: llmCommandResult 
-                    });
-                    return;
-                }
+    const textExt = new Set(['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.py', '.java', '.c', '.cpp', '.h', '.php', '.rb', '.go', '.rs', '.swift', '.kt', '.dart', '.vue', '.svelte', '.sql', '.sh']);
 
-                
-                const searchGlob = targetDirectory ? `${targetDirectory}/**/*` : '**/*';
-                const excludePattern = targetDirectory ? `${targetDirectory}/**/node_modules/**` : '**/node_modules/**';
-                
-                
-                const files = await vscode.workspace.findFiles(
-                    searchGlob, 
-                    excludePattern 
-                );
-
-                
-                const searchResults: Array<{
-                    filePath: string;
-                    lineNumber: number;
-                    lineContent: string;
-                    matchedText: string;
-                }> = [];
-
-                let totalMatchCount = 0;
-                let processedFileCount = 0;
-
-                
-                for (const file of files) {
-                    try {
-                        
-                        const fileName = file.path.toLowerCase();
-                        const textFileExtensions = [
-                            '.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.scss', '.sass',
-                            '.json', '.xml', '.yml', '.yaml', '.py', '.java', '.c', '.cpp', '.h', '.hpp',
-                            '.cs', '.php', '.rb', '.go', '.rs', '.swift', '.kt', '.dart', '.vue', '.svelte',
-                            '.sql', '.sh', '.bat', '.ps1', '.dockerfile', '.gitignore', '.env'
-                        ];
-                        
-                        const isTextFile = textFileExtensions.some(ext => fileName.endsWith(ext)) || 
-                                          !fileName.includes('.'); 
-                        
-                        if (!isTextFile) {
-                            continue; 
-                        }
-
-                        
-                        const data = await vscode.workspace.fs.readFile(file);
-                        const decoder = new TextDecoder();
-                        const fileContent = decoder.decode(data);
-                        
-                        processedFileCount++;
-
-                        
-                        const lines = fileContent.split('\n');
-                        
-                        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-                            const line = lines[lineIndex];
-                            const matches = line.match(regex);
-                            
-                            if (matches) {
-                                
-                                const relativePath = vscode.workspace.asRelativePath(file);
-                                
-                                for (const match of matches) {
-                                    searchResults.push({
-                                        filePath: relativePath,
-                                        lineNumber: lineIndex + 1, 
-                                        lineContent: line.trim(),
-                                        matchedText: match
-                                    });
-                                    totalMatchCount++;
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        
-                        console.log(`ファイル ${file.path} の読み取りをスキップしました: ${error}`);
-                    }
-                }
-
-                
-                const searchScope = targetDirectory ? `ディレクトリ '${targetDirectory}' 内の` : 'ワークスペース内の';
-                const resultMessage = totalMatchCount > 0
-                    ? `検索パターン '${searchPattern}' が ${searchScope}${searchResults.length} 箇所で見つかりました (${processedFileCount} ファイルを検索)`
-                    : `検索パターン '${searchPattern}' にマッチする内容は${searchScope}見つかりませんでした (${processedFileCount} ファイルを検索)`;
-
-                
-                let resultDetail = resultMessage;
-                
-                if (searchResults.length > 0) {
-                    resultDetail += '\n\n検索結果:\n';
-                    
-                    
-                    const displayResults = searchResults.slice(0, 50);
-                    
-                    for (const result of displayResults) {
-                        resultDetail += `\n📄 ${result.filePath}:${result.lineNumber}\n`;
-                        resultDetail += `   ${result.lineContent}\n`;
-                        resultDetail += `   ↳ マッチ: "${result.matchedText}"\n`;
-                    }
-                    
-                    if (searchResults.length > 50) {
-                        resultDetail += `\n... 他 ${searchResults.length - 50} 件の結果があります\n`;
-                    }
-                }
-
-                resolve({
-                    displayMessage: llmCommandResult.executionDescription,
-                    displayCommand: "showMessage",
-                    result: "success",
-                    resultDetail: resultDetail,
-                    llmCommandResult: llmCommandResult 
-                });
-            } catch (error) {
-                
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                resolve({
-                    displayMessage: `ファイル内容検索エラー: ${errorMessage}`,
-                    displayCommand: "showMessage",
-                    result: "error",
-                    resultDetail: `ファイル内容検索中にエラーが発生しました: ${errorMessage}`,
-                    llmCommandResult: llmCommandResult 
-                });
+    const walk = async (uri: vscode.Uri, depth: number) => {
+      if (depth > maxDepth) { return; }
+      let entries: [string, vscode.FileType][];
+      try { entries = await (vscodeApi.workspace.fs || vscode.workspace.fs).readDirectory(uri); } catch { return; }
+      for (const [name, type] of entries) {
+        const child = vscode.Uri.joinPath(uri, name);
+          if (type === (vscodeApi.FileType || vscode.FileType).Directory) { await walk(child, depth + 1); }
+        else if (type === (vscodeApi.FileType || vscode.FileType).File) {
+          const lower = name.toLowerCase();
+          const ext = lower.includes('.') ? lower.substring(lower.lastIndexOf('.')) : '';
+          if (!textExt.has(ext) && ext !== '') { continue; }
+          try {
+            const data = await (vscodeApi.workspace.fs || vscode.workspace.fs).readFile(child);
+            const text = decoder.decode(data);
+            const lines = text.split(/\r?\n/);
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              try { rx.lastIndex = 0; } catch { }
+              const matches = Array.from(line.matchAll(rx));
+              for (const m of matches) {
+                results.push({ file: vscode.workspace.asRelativePath(child), line: i + 1, text: line, match: String(m[0]) });
+              }
             }
-        });
-    }
+          } catch { }
+        }
+      }
+    };
+
+    await walk(rootUri, 0);
+
+    if (results.length === 0) { return { displayMessage: `検索完了: 0 件`, displayCommand: 'showMessage', result: 'success', resultDetail: `検索パターン '${String(pattern)}' に一致する行は見つかりませんでした。`, llmCommandResult }; }
+
+    const show = results.slice(0, 200).map(r => `📄 ${r.file}:${r.line}\n   ${r.text}\n   ↳ マッチ: "${r.match}"`).join('\n\n');
+    const detail = `合計 ${results.length} 件の一致を検出しました。\n\n${show}${results.length > 200 ? `\n\n... 他 ${results.length - 200} 件の結果があります` : ''}`;
+    return { displayMessage: `検索完了: ${results.length} 件見つかりました`, displayCommand: 'showMessage', result: 'success', resultDetail: detail, llmCommandResult };
+  }
 }

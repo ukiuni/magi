@@ -1,9 +1,9 @@
-import { LLM } from '../llm/LLM';
-import { PromptContext } from './PromptContext';
-import { AiName, ToolResult } from '../tools/ToolInterface';
-import { getAllTools } from '../tools/ToolFactory';
-import { LLMCommandResult } from '../llm/LLMCommandResult';
-import { createAllToolsDescriptionPrompt, createToolExecutionHistoryPrompt, createMAGIDescriptionPrompt} from './PromptUtils';
+import { LLM } from '../llm/LLM.js';
+import { PromptContext } from './PromptContext.js';
+import { AiName, ToolResult } from '../tools/ToolInterface.js';
+import { getAllTools } from '../tools/ToolFactory.js';
+import { LLMCommandResult } from '../llm/LLMCommandResult.js';
+import { createAllToolsDescriptionPrompt, createToolExecutionHistoryPrompt, createMAGIDescriptionPrompt} from './PromptUtils.js';
 
 export class Balthasar {
     private llm: LLM;
